@@ -1,0 +1,42 @@
+{
+  "short_name": "AutoFinance",
+  "name": "AutoFinance Hub - Car Financing Platform",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+```
+
+---
+
+### **File 5: public/robots.txt**
+
+Create: `autofinance-frontend/public/robots.txt`
+```
+User-agent: *
+Disallow:
+```
+
+---
+
+## **STEP 2: Verify Your Project Structure**
+
+Your folder should look like this:
+```
+autofinance-frontend/
+├── node_modules/          (created by npm install)
+├── public/
+│   ├── index.html         ← MUST HAVE
+│   ├── manifest.json      ← MUST HAVE
+│   └── robots.txt         ← MUST HAVE
+├── src/
+│   ├── App.js             ← MUST HAVE
+│   ├── App.css            ← MUST HAVE
+│   ├── index.js           ← MUST HAVE
+│   ├── index.css          ← OPTIONAL
+│   └── supabaseClient.js  ← MUST HAVE
+├── .gitignore             ← MUST HAVE
+├── package.json           ← MUST HAVE
+└── package-lock.json      (created by npm install)
