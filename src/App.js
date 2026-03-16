@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+import Login from './components/Login';
+import Register from './components/Register';
 import './App.css';
 
 // Mock Data
@@ -108,7 +111,6 @@ const MOCK_INSURANCE = [
     { id: 3, name: "Heritage Insurance", type: "Third Party", premium: 520000, basePremiumPercent: 2.5 }
 ];
 
-// Calculate Monthly Payment
 function calculateMonthlyPayment(principal, annualRate, months) {
     const monthlyRate = annualRate / 100 / 12;
     const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / 
@@ -116,26 +118,76 @@ function calculateMonthlyPayment(principal, annualRate, months) {
     return Math.round(payment);
 }
 
-// Navigation Component
+
+
+
 function TopNav({ user, onLogout }) {
     return (
         <nav className="top-nav">
             <div className="nav-container">
                 <div className="logo">
-                    🚗 AutoFinance Hub
+                    <svg width="40" height="40" viewBox="0 0 80 80" style={{ marginRight: '10px' }}>
+                        <circle cx="40" cy="40" r="38" fill="url(#gradient)" stroke="#fff" strokeWidth="4"/>
+                        <path d="M25 35 L40 25 L55 35 L55 50 C55 52 53 54 51 54 L29 54 C27 54 25 52 25 50 Z" fill="white"/>
+                        <rect x="35" y="42" width="10" height="12" fill="url(#gradient)"/>
+                        <circle cx="32" cy="57" r="4" fill="#333"/>
+                        <circle cx="48" cy="57" r="4" fill="#333"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0" y1="0" x2="80" y2="80">
+                                <stop offset="0%" stopColor="#667eea"/>
+                                <stop offset="100%" stopColor="#764ba2"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    AutoFinance Hub
                 </div>
                 <ul className="nav-links">
-                    <li><a href="/">Browse Cars</a></li>
-                    <li><a href="/">Financing</a></li>
-                    <li><a href="/">About</a></li>
+                    <li><a href="/">Magari</a></li>
+                    <li><a href="/">Mikopo</a></li>
+                    <li><a href="/">Kuhusu Sisi</a></li>
                 </ul>
                 <div className="user-menu">
                     {user && (
                         <>
                             <div className="user-avatar">
-                                {user.name.charAt(0)}
+                                {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'U'}
                             </div>
-                            <span>{user.name}</span>
+                            <span style={{ 
+                                marginRight: '1rem',
+                                color: 'white',
+                                fontWeight: '500'
+                            }}>
+                                {user.user_metadata?.full_name || user.email || 'User'}
+                            </span>
+                            <button 
+                                onClick={onLogout}
+                                style={{
+                                    padding: '10px 24px',
+                                    backgroundColor: '#ffffff',
+                                    border: '2px solid rgba(255,255,255,0.9)',
+                                    borderRadius: '8px',
+                                    color: '#667eea',  // Purple text - HIGH CONTRAST
+                                    cursor: 'pointer',
+                                    fontWeight: '700',
+                                    fontSize: '14px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                    transition: 'all 0.2s ease',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8f9ff';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#ffffff';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                                }}
+                            >
+                                    LOGOUT 
+                            </button>
                         </>
                     )}
                 </div>
@@ -144,19 +196,23 @@ function TopNav({ user, onLogout }) {
     );
 }
 
+
+
+
+
 // Sidebar Component
 function Sidebar({ userType, activeView, onNavigate }) {
     const menus = {
         buyer: [
-            { id: 'browse', label: 'Browse Cars', icon: '🚗' },
-            { id: 'applications', label: 'My Applications', icon: '📋' },
-            { id: 'saved', label: 'Saved Cars', icon: '❤️' }
+            { id: 'browse', label: 'Tafuta Magari', icon: '🚗' },
+            { id: 'applications', label: 'Maombi Yangu', icon: '📋' },
+            { id: 'saved', label: 'Magari Nipendeayo', icon: '❤️' }
         ],
         seller: [
-            { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-            { id: 'listings', label: 'My Listings', icon: '🚗' },
-            { id: 'applications', label: 'Applications', icon: '📋' },
-            { id: 'add-car', label: 'Add New Car', icon: '➕' }
+            { id: 'dashboard', label: 'Dashibodi', icon: '📊' },
+            { id: 'listings', label: 'Magari Yangu', icon: '🚗' },
+            { id: 'applications', label: 'Maombi', icon: '📋' },
+            { id: 'add-car', label: 'Ongeza Gari', icon: '➕' }
         ],
         bank: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -178,7 +234,7 @@ function Sidebar({ userType, activeView, onNavigate }) {
                 {menus[userType].map(item => (
                     <li key={item.id}>
                         <a 
-                            href="/"
+                            href="#"
                             className={activeView === item.id ? 'active' : ''}
                             onClick={(e) => { e.preventDefault(); onNavigate(item.id); }}
                         >
@@ -192,244 +248,48 @@ function Sidebar({ userType, activeView, onNavigate }) {
     );
 }
 
-// Car Card Component
-function CarCard({ car, onSelect }) {
-    return (
-        <div className="car-card" onClick={() => onSelect(car)}>
-            <div className="car-image">
-                {car.condition === "Certified Pre-Owned" && (
-                    <span className="car-badge">✓ Verified</span>
-                )}
-                🚗
-            </div>
-            <div className="car-details">
-                <h3 className="car-title">{car.make} {car.model}</h3>
-                <div className="car-price">
-                    TZS {(car.price / 1000000).toFixed(1)}M
-                </div>
-                <div className="car-specs">
-                    <span className="spec-item">📅 {car.year}</span>
-                    <span className="spec-item">⚙️ {car.transmission}</span>
-                    <span className="spec-item">⛽ {car.fuelType}</span>
-                </div>
-                <div className="spec-item">📍 {car.location}</div>
-                <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                    Get Financing
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// Loan Comparison Component
-function LoanComparison({ car, onClose, onApply }) {
-    const [downPayment, setDownPayment] = useState(car.price * 0.2);
-    const [selectedTerm, setSelectedTerm] = useState(48);
-    const [selectedBank, setSelectedBank] = useState(null);
-    const [selectedInsurance, setSelectedInsurance] = useState(null);
-
-    const loanAmount = car.price - downPayment;
-    const downPaymentPercent = (downPayment / car.price * 100).toFixed(0);
-
-    const comparisons = MOCK_BANKS.flatMap(bank => 
-        bank.products.map(product => {
-            const processingFee = loanAmount * (product.processingFee / 100);
-            const monthlyPayment = calculateMonthlyPayment(loanAmount, product.interestRate, selectedTerm);
-            const totalPayable = monthlyPayment * selectedTerm;
-            const totalInterest = totalPayable - loanAmount;
-
-            return {
-                bankId: bank.id,
-                bankName: bank.name,
-                productId: product.id,
-                productName: product.name,
-                interestRate: product.interestRate,
-                monthlyPayment,
-                totalInterest,
-                totalPayable,
-                processingFee
-            };
-        })
-    );
-
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2 className="modal-title">Financing Options - {car.make} {car.model}</h2>
-                    <button className="modal-close" onClick={onClose}>×</button>
-                </div>
-                <div className="modal-body">
-                    <div className="card">
-                        <h3>Car Price: TZS {car.price.toLocaleString()}</h3>
-                        
-                        <div className="form-group">
-                            <label className="form-label">
-                                Down Payment: {downPaymentPercent}% 
-                                (TZS {downPayment.toLocaleString()})
-                            </label>
-                            <input 
-                                type="range"
-                                min={car.price * 0.1}
-                                max={car.price * 0.5}
-                                step={100000}
-                                value={downPayment}
-                                onChange={e => setDownPayment(Number(e.target.value))}
-                                className="form-input"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Loan Term</label>
-                            <select 
-                                className="form-select"
-                                value={selectedTerm}
-                                onChange={e => setSelectedTerm(Number(e.target.value))}
-                            >
-                                <option value={12}>12 months</option>
-                                <option value={24}>24 months</option>
-                                <option value={36}>36 months</option>
-                                <option value={48}>48 months</option>
-                                <option value={60}>60 months</option>
-                            </select>
-                        </div>
-
-                        <p style={{ marginTop: '1rem' }}>
-                            <strong>Loan Amount: TZS {loanAmount.toLocaleString()}</strong>
-                        </p>
-                    </div>
-
-                    <h3 style={{ margin: '2rem 0 1rem' }}>Compare Banks</h3>
-                    <table className="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>Bank</th>
-                                <th>Interest Rate</th>
-                                <th>Monthly Payment</th>
-                                <th>Total Interest</th>
-                                <th>Processing Fee</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {comparisons.map((comp, idx) => (
-                                <tr key={idx}>
-                                    <td>
-                                        <div className="bank-name">
-                                            <div className="bank-logo">
-                                                {comp.bankName.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <div>{comp.bankName}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                    {comp.productName}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{comp.interestRate}%</td>
-                                    <td><strong>TZS {comp.monthlyPayment.toLocaleString()}</strong></td>
-                                    <td>TZS {comp.totalInterest.toLocaleString()}</td>
-                                    <td>TZS {comp.processingFee.toLocaleString()}</td>
-                                    <td>
-                                        <button 
-                                            className="btn btn-sm btn-primary"
-                                            onClick={() => setSelectedBank(comp)}
-                                        >
-                                            Select
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-
-                    {selectedBank && (
-                        <>
-                            <h3 style={{ margin: '2rem 0 1rem' }}>Choose Insurance</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                                {MOCK_INSURANCE.map(ins => (
-                                    <div 
-                                        key={ins.id}
-                                        className="card"
-                                        style={{ 
-                                            cursor: 'pointer',
-                                            border: selectedInsurance?.id === ins.id ? '2px solid var(--primary)' : '1px solid var(--border)'
-                                        }}
-                                        onClick={() => setSelectedInsurance(ins)}
-                                    >
-                                        <h4>{ins.name}</h4>
-                                        <p>{ins.type}</p>
-                                        <p><strong>TZS {ins.premium.toLocaleString()}/year</strong></p>
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                            ({ins.basePremiumPercent}% of car value)
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </div>
-                <div className="modal-footer">
-                    <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-                    {selectedBank && selectedInsurance && (
-                        <button 
-                            className="btn btn-primary"
-                            onClick={() => onApply({ 
-                                car, 
-                                bank: selectedBank, 
-                                insurance: selectedInsurance,
-                                downPayment,
-                                loanAmount,
-                                term: selectedTerm
-                            })}
-                        >
-                            Submit Application
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
 // Buyer Dashboard
 function BuyerDashboard() {
     const [view, setView] = useState('browse');
     const [selectedCar, setSelectedCar] = useState(null);
-    const [applications, setApplications] = useState([]);
-    const [cars, setCars] = useState(MOCK_CARS);
+    const [selectedBank, setSelectedBank] = useState(null);
+    const [loanDetails, setLoanDetails] = useState({
+        downPayment: 0,
+        term: 36
+    });
 
-    useEffect(() => {
-        fetchCars();
-    }, []);
+    const handleCarSelect = (car) => {
+        setSelectedCar(car);
+        setLoanDetails({
+            ...loanDetails,
+            downPayment: Math.round(car.price * 0.2)
+        });
+    };
 
-    async function fetchCars() {
-        try {
-            const { data, error } = await supabase
-                .from('cars')
-                .select('*')
-                .eq('status', 'available');
+    const getLoanComparison = () => {
+        if (!selectedCar) return [];
+        
+        const loanAmount = selectedCar.price - loanDetails.downPayment;
+        
+        return MOCK_BANKS.map(bank => {
+            const product = bank.products[0];
+            const monthlyPayment = calculateMonthlyPayment(
+                loanAmount,
+                product.interestRate,
+                loanDetails.term
+            );
+            const totalPayment = monthlyPayment * loanDetails.term;
+            const totalInterest = totalPayment - loanAmount;
             
-            if (error) {
-                console.error('Error fetching cars:', error);
-            } else if (data && data.length > 0) {
-                setCars(data);
-            }
-        } catch (err) {
-            console.error('Exception fetching cars:', err);
-        }
-    }
-
-    const handleApply = async (application) => {
-        setApplications([...applications, { 
-            ...application, 
-            id: applications.length + 1,
-            status: 'submitted',
-            submittedAt: new Date().toISOString()
-        }]);
-        setSelectedCar(null);
-        setView('applications');
+            return {
+                bank: bank.name,
+                product: product.name,
+                interestRate: product.interestRate,
+                monthlyPayment,
+                totalPayment,
+                totalInterest
+            };
+        }).sort((a, b) => a.monthlyPayment - b.monthlyPayment);
     };
 
     return (
@@ -440,72 +300,152 @@ function BuyerDashboard() {
                     <>
                         <div className="card-header">
                             <h1 className="card-title">Browse Cars</h1>
-                            <p className="card-subtitle">Find your perfect car with flexible financing</p>
+                            <p className="card-subtitle">Find your dream car and get financing</p>
                         </div>
 
                         <div className="cars-grid">
-                            {cars.map(car => (
-                                <CarCard key={car.id} car={car} onSelect={setSelectedCar} />
+                            {MOCK_CARS.map(car => (
+                                <div key={car.id} className="car-card" onClick={() => handleCarSelect(car)}>
+                                    <div className="car-image">
+                                        🚗
+                                        <span className="car-badge">{car.condition}</span>
+                                    </div>
+                                    <div className="car-details">
+                                        <h3 className="car-title">{car.year} {car.make} {car.model}</h3>
+                                        <div className="car-price">TZS {car.price.toLocaleString()}</div>
+                                        <div className="car-specs">
+                                            <span className="spec-item">📍 {car.location}</span>
+                                            <span className="spec-item">⚙️ {car.transmission}</span>
+                                            <span className="spec-item">⛽ {car.fuelType}</span>
+                                            <span className="spec-item">🎨 {car.color}</span>
+                                        </div>
+                                        <button className="btn btn-primary">View Details</button>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </>
                 )}
+            </div>
 
-                {view === 'applications' && (
-                    <>
-                        <div className="card-header">
-                            <h1 className="card-title">My Applications</h1>
-                            <p className="card-subtitle">Track your loan applications</p>
+            {/* Car Details Modal */}
+            {selectedCar && (
+                <div className="modal-overlay" onClick={() => setSelectedCar(null)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">{selectedCar.year} {selectedCar.make} {selectedCar.model}</h2>
+                            <button className="modal-close" onClick={() => setSelectedCar(null)}>×</button>
                         </div>
-
-                        {applications.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-icon">📋</div>
-                                <h3 className="empty-title">No Applications Yet</h3>
-                                <p className="empty-text">Start browsing cars to submit your first application</p>
-                            </div>
-                        ) : (
+                        <div className="modal-body">
                             <div className="card">
+                                <h3>Car Details</h3>
+                                <table style={{ width: '100%', marginTop: '1rem' }}>
+                                    <tbody>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Price:</td>
+                                            <td style={{ padding: '0.5rem' }}>TZS {selectedCar.price.toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Mileage:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedCar.mileage.toLocaleString()} km</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Transmission:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedCar.transmission}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Fuel Type:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedCar.fuelType}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Location:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedCar.location}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Seller:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedCar.sellerName}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="card">
+                                <h3>Loan Calculator</h3>
+                                <div className="form-group">
+                                    <label>Down Payment (TZS)</label>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={loanDetails.downPayment}
+                                        onChange={(e) => setLoanDetails({ ...loanDetails, downPayment: parseInt(e.target.value) })}
+                                        min="0"
+                                        max={selectedCar.price}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Loan Term (months)</label>
+                                    <select
+                                        className="form-select"
+                                        value={loanDetails.term}
+                                        onChange={(e) => setLoanDetails({ ...loanDetails, term: parseInt(e.target.value) })}
+                                    >
+                                        <option value="12">12 months</option>
+                                        <option value="24">24 months</option>
+                                        <option value="36">36 months</option>
+                                        <option value="48">48 months</option>
+                                        <option value="60">60 months</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="card">
+                                <h3>Compare Bank Offers</h3>
                                 <table className="comparison-table">
                                     <thead>
                                         <tr>
-                                            <th>Car</th>
                                             <th>Bank</th>
-                                            <th>Loan Amount</th>
+                                            <th>Interest Rate</th>
                                             <th>Monthly Payment</th>
-                                            <th>Status</th>
-                                            <th>Submitted</th>
+                                            <th>Total Interest</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {applications.map(app => (
-                                            <tr key={app.id}>
-                                                <td>{app.car.make} {app.car.model}</td>
-                                                <td>{app.bank.bankName}</td>
-                                                <td>TZS {app.loanAmount.toLocaleString()}</td>
-                                                <td>TZS {app.bank.monthlyPayment.toLocaleString()}</td>
+                                        {getLoanComparison().map((offer, idx) => (
+                                            <tr key={idx}>
                                                 <td>
-                                                    <span className="badge badge-info">
-                                                        {app.status}
-                                                    </span>
+                                                    <div className="bank-name">
+                                                        <div className="bank-logo">{offer.bank.charAt(0)}</div>
+                                                        <div>
+                                                            <strong>{offer.bank}</strong>
+                                                            <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                                                                {offer.product}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </td>
-                                                <td>{new Date(app.submittedAt).toLocaleDateString()}</td>
+                                                <td>{offer.interestRate}%</td>
+                                                <td><strong>TZS {offer.monthlyPayment.toLocaleString()}</strong></td>
+                                                <td>TZS {offer.totalInterest.toLocaleString()}</td>
+                                                <td>
+                                                    <button
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => alert('Application submitted!')}
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        )}
-                    </>
-                )}
-            </div>
-
-            {selectedCar && (
-                <LoanComparison 
-                    car={selectedCar} 
-                    onClose={() => setSelectedCar(null)}
-                    onApply={handleApply}
-                />
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-outline" onClick={() => setSelectedCar(null)}>Close</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );
@@ -944,70 +884,41 @@ function SellerDashboard() {
                             <div className="stat-card">
                                 <div className="stat-label">Total Sales</div>
                                 <div className="stat-value">12</div>
-                                <div className="stat-change">↑ 3 this month</div>
+                                <div className="stat-change">This month: 2</div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-label">Total Revenue</div>
-                                <div className="stat-value">445M</div>
+                                <div className="stat-label">Pending Applications</div>
+                                <div className="stat-value">8</div>
+                                <div className="stat-change">Awaiting approval</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-label">Revenue</div>
+                                <div className="stat-value">520M</div>
                                 <div className="stat-change">↑ 25% growth</div>
-                            </div>
-                            <div className="stat-card">
-                                <div className="stat-label">Avg Days to Sell</div>
-                                <div className="stat-value">18</div>
-                                <div className="stat-change">↓ 3 days faster</div>
                             </div>
                         </div>
 
                         <div className="card">
-                            <h3 className="card-title">Pending Payments</h3>
-                            <table className="comparison-table">
-                                <thead>
-                                    <tr>
-                                        <th>Car</th>
-                                        <th>Buyer</th>
-                                        <th>Sale Price</th>
-                                        <th>Status</th>
-                                        <th>Expected Payment</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Toyota Land Cruiser</td>
-                                        <td>John Doe</td>
-                                        <td>TZS 45,000,000</td>
-                                        <td><span className="badge badge-warning">Loan Approved</span></td>
-                                        <td>Feb 25, 2024</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-
-                {view === 'listings' && (
-                    <>
-                        <div className="card-header">
-                            <h1 className="card-title">My Listings</h1>
-                            <button className="btn btn-primary">+ Add New Car</button>
-                        </div>
-
-                        <div className="cars-grid">
-                            {MOCK_CARS.filter(c => c.sellerId === 1).map(car => (
-                                <div key={car.id} className="car-card">
-                                    <div className="car-image">🚗</div>
-                                    <div className="car-details">
-                                        <h3 className="car-title">{car.make} {car.model}</h3>
-                                        <div className="car-price">TZS {(car.price / 1000000).toFixed(1)}M</div>
-                                        <div style={{ marginTop: '1rem' }}>
-                                            <span className="badge badge-success">Available</span>
+                            <h3>Your Listings</h3>
+                            <div className="cars-grid" style={{ marginTop: '1rem' }}>
+                                {MOCK_CARS.filter(car => car.sellerId === 1).map(car => (
+                                    <div key={car.id} className="car-card">
+                                        <div className="car-image">
+                                            🚗
+                                            <span className="car-badge">{car.status}</span>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                                            <button className="btn btn-sm btn-outline">Edit</button>
-                                            <button className="btn btn-sm btn-outline">Delete</button>
+                                        <div className="car-details">
+                                            <h3 className="car-title">{car.year} {car.make} {car.model}</h3>
+                                            <div className="car-price">TZS {car.price.toLocaleString()}</div>
+                                            <div className="car-specs">
+                                                <span className="spec-item">📍 {car.location}</span>
+                                                <span className="spec-item">👁️ 245 views</span>
+                                            </div>
+                                            <button className="btn btn-outline btn-sm">Manage</button>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </>
                 )}
@@ -1016,82 +927,9 @@ function SellerDashboard() {
     );
 }
 
-// Insurance Dashboard - NEW!
+// Insurance Dashboard
 function InsuranceDashboard() {
     const [view, setView] = useState('dashboard');
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            productName: "Comprehensive Plus",
-            coverageType: "Comprehensive",
-            basePremiumPercent: 3.5,
-            minPremium: 500000,
-            maxPremium: 5000000,
-            coverageLimit: 100000000,
-            minCarValue: 5000000,
-            maxCarValue: 200000000,
-            minCarAge: 0,
-            maxCarAge: 10,
-            isActive: true
-        },
-        {
-            id: 2,
-            productName: "Basic Coverage",
-            coverageType: "Third Party",
-            basePremiumPercent: 2.0,
-            minPremium: 300000,
-            maxPremium: 2000000,
-            coverageLimit: 50000000,
-            minCarValue: 2000000,
-            maxCarValue: 100000000,
-            minCarAge: 0,
-            maxCarAge: 15,
-            isActive: true
-        }
-    ]);
-    const [editingProduct, setEditingProduct] = useState(null);
-    const [policyRequests, setPolicyRequests] = useState([
-        {
-            id: 1,
-            applicantName: "John Doe",
-            car: "Toyota Land Cruiser Prado 2020",
-            carValue: 45000000,
-            productName: "Comprehensive Plus",
-            annualPremium: 1575000,
-            status: "pending",
-            submittedAt: "2024-02-15"
-        },
-        {
-            id: 2,
-            applicantName: "Jane Smith",
-            car: "Honda CR-V 2019",
-            carValue: 32500000,
-            productName: "Comprehensive Plus",
-            annualPremium: 1137500,
-            status: "issued",
-            submittedAt: "2024-02-10",
-            policyNumber: "AAR-2024-001234"
-        }
-    ]);
-
-    const handleIssuePolicy = (requestId) => {
-        const policyNumber = `AAR-2024-${String(Math.floor(Math.random() * 900000) + 100000)}`;
-        setPolicyRequests(policyRequests.map(req => 
-            req.id === requestId 
-                ? { ...req, status: 'issued', policyNumber, issuedAt: new Date().toISOString().split('T')[0] }
-                : req
-        ));
-        alert(`Policy issued! Policy Number: ${policyNumber}`);
-    };
-
-    const getStatusBadge = (status) => {
-        const badges = {
-            'pending': <span className="badge badge-warning">Pending Review</span>,
-            'issued': <span className="badge badge-success">Policy Issued</span>,
-            'rejected': <span className="badge badge-danger">Rejected</span>
-        };
-        return badges[status] || <span className="badge">{status}</span>;
-    };
 
     return (
         <>
@@ -1101,176 +939,53 @@ function InsuranceDashboard() {
                     <>
                         <div className="card-header">
                             <h1 className="card-title">Insurance Dashboard</h1>
-                            <p className="card-subtitle">AAR Insurance Tanzania</p>
+                            <p className="card-subtitle">AAR Insurance</p>
                         </div>
 
                         <div className="stats-grid">
                             <div className="stat-card">
-                                <div className="stat-label">Total Policies</div>
-                                <div className="stat-value">342</div>
+                                <div className="stat-label">Active Policies</div>
+                                <div className="stat-value">456</div>
                                 <div className="stat-change">↑ 8% this month</div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-label">Active Policies</div>
-                                <div className="stat-value">298</div>
-                                <div className="stat-change">87% retention</div>
+                                <div className="stat-label">New Requests</div>
+                                <div className="stat-value">23</div>
+                                <div className="stat-change">Pending review</div>
                             </div>
                             <div className="stat-card">
                                 <div className="stat-label">Premium Revenue</div>
-                                <div className="stat-value">456M</div>
-                                <div className="stat-change">↑ 22% growth</div>
+                                <div className="stat-value">125M</div>
+                                <div className="stat-change">↑ 15% growth</div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-label">Avg Premium</div>
-                                <div className="stat-value">1.3M</div>
-                                <div className="stat-change">Stable</div>
+                                <div className="stat-label">Claims Ratio</div>
+                                <div className="stat-value">12%</div>
+                                <div className="stat-change">Healthy</div>
                             </div>
                         </div>
 
                         <div className="card">
-                            <h3 className="card-title">Recent Policy Requests</h3>
-                            <table className="comparison-table">
-                                <thead>
-                                    <tr>
-                                        <th>Applicant</th>
-                                        <th>Vehicle</th>
-                                        <th>Product</th>
-                                        <th>Annual Premium</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {policyRequests.slice(0, 3).map(req => (
-                                        <tr key={req.id}>
-                                            <td>{req.applicantName}</td>
-                                            <td>{req.car}</td>
-                                            <td>{req.productName}</td>
-                                            <td>TZS {req.annualPremium.toLocaleString()}</td>
-                                            <td>{getStatusBadge(req.status)}</td>
-                                            <td>
-                                                {req.status === 'pending' ? (
-                                                    <button 
-                                                        className="btn btn-sm btn-primary"
-                                                        onClick={() => handleIssuePolicy(req.id)}
-                                                    >
-                                                        Issue Policy
-                                                    </button>
-                                                ) : (
-                                                    <button className="btn btn-sm btn-outline">
-                                                        View
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-
-                {view === 'requests' && (
-                    <>
-                        <div className="card-header">
-                            <h1 className="card-title">Policy Requests</h1>
-                        </div>
-
-                        <div className="card">
-                            <table className="comparison-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Applicant</th>
-                                        <th>Vehicle</th>
-                                        <th>Product</th>
-                                        <th>Premium</th>
-                                        <th>Submitted</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {policyRequests.map(req => (
-                                        <tr key={req.id}>
-                                            <td>#{req.id}</td>
-                                            <td>{req.applicantName}</td>
-                                            <td>{req.car}</td>
-                                            <td>{req.productName}</td>
-                                            <td>TZS {req.annualPremium.toLocaleString()}</td>
-                                            <td>{req.submittedAt}</td>
-                                            <td>{getStatusBadge(req.status)}</td>
-                                            <td>
-                                                {req.status === 'pending' ? (
-                                                    <button 
-                                                        className="btn btn-sm btn-primary"
-                                                        onClick={() => handleIssuePolicy(req.id)}
-                                                    >
-                                                        Issue Policy
-                                                    </button>
-                                                ) : (
-                                                    <button className="btn btn-sm btn-outline">
-                                                        View Details
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-
-                {view === 'products' && (
-                    <>
-                        <div className="card-header">
-                            <h1 className="card-title">Insurance Products</h1>
-                            <button 
-                                className="btn btn-primary"
-                                onClick={() => setEditingProduct({})}
-                            >
-                                + Add New Product
-                            </button>
-                        </div>
-
-                        <div className="card">
-                            <table className="comparison-table">
+                            <h3>Insurance Products</h3>
+                            <table className="comparison-table" style={{ marginTop: '1rem' }}>
                                 <thead>
                                     <tr>
                                         <th>Product Name</th>
-                                        <th>Coverage Type</th>
-                                        <th>Base Premium</th>
-                                        <th>Coverage Limit</th>
-                                        <th>Car Value Range</th>
-                                        <th>Status</th>
+                                        <th>Type</th>
+                                        <th>Premium Rate</th>
+                                        <th>Active Policies</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {products.map(product => (
+                                    {MOCK_INSURANCE.map(product => (
                                         <tr key={product.id}>
-                                            <td>{product.productName}</td>
-                                            <td>{product.coverageType}</td>
+                                            <td>{product.name}</td>
+                                            <td>{product.type}</td>
                                             <td>{product.basePremiumPercent}%</td>
-                                            <td>TZS {(product.coverageLimit / 1000000).toFixed(0)}M</td>
+                                            <td>152</td>
                                             <td>
-                                                {(product.minCarValue / 1000000).toFixed(0)}M - {(product.maxCarValue / 1000000).toFixed(0)}M
-                                            </td>
-                                            <td>
-                                                {product.isActive ? (
-                                                    <span className="badge badge-success">Active</span>
-                                                ) : (
-                                                    <span className="badge badge-danger">Inactive</span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <button 
-                                                    className="btn btn-sm btn-outline"
-                                                    onClick={() => setEditingProduct(product)}
-                                                >
-                                                    Edit
-                                                </button>
+                                                <button className="btn btn-sm btn-outline">Manage</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -1280,192 +995,159 @@ function InsuranceDashboard() {
                     </>
                 )}
             </div>
-
-            {/* Product Edit Modal */}
-            {editingProduct && (
-                <div className="modal-overlay" onClick={() => setEditingProduct(null)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2 className="modal-title">
-                                {editingProduct.id ? 'Edit Product' : 'Add New Product'}
-                            </h2>
-                            <button className="modal-close" onClick={() => setEditingProduct(null)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="card">
-                                <h3>Product Details</h3>
-                                <div className="form-group">
-                                    <label className="form-label">Product Name</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-input"
-                                        placeholder="e.g., Comprehensive Plus"
-                                        defaultValue={editingProduct.productName}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Coverage Type</label>
-                                    <select className="form-select" defaultValue={editingProduct.coverageType}>
-                                        <option value="comprehensive">Comprehensive</option>
-                                        <option value="third_party">Third Party</option>
-                                        <option value="third_party_fire_theft">Third Party Fire & Theft</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Base Premium (% of car value)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="3.5"
-                                        step="0.1"
-                                        defaultValue={editingProduct.basePremiumPercent}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Min Premium (TZS)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="500000"
-                                        defaultValue={editingProduct.minPremium}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Max Premium (TZS)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="5000000"
-                                        defaultValue={editingProduct.maxPremium}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Coverage Limit (TZS)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="100000000"
-                                        defaultValue={editingProduct.coverageLimit}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <h3>Eligibility Criteria</h3>
-                                <div className="form-group">
-                                    <label className="form-label">Min Car Value (TZS)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="5000000"
-                                        defaultValue={editingProduct.minCarValue}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Max Car Value (TZS)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="200000000"
-                                        defaultValue={editingProduct.maxCarValue}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Max Car Age (years)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input"
-                                        placeholder="10"
-                                        defaultValue={editingProduct.maxCarAge}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-outline" onClick={() => setEditingProduct(null)}>
-                                Cancel
-                            </button>
-                            <button 
-                                className="btn btn-primary"
-                                onClick={() => {
-                                    alert('Product saved! (In production, this will save to database)');
-                                    setEditingProduct(null);
-                                }}
-                            >
-                                Save Product
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 }
 
-// Main App
-function App() {
-    const [userType, setUserType] = useState(null);
+// Protected Route Component
+function ProtectedRoute({ children, allowedUserType }) {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const handleLogin = (type) => {
-        setUserType(type);
-        const names = {
-            buyer: 'John Doe',
-            seller: 'Premium Motors',
-            bank: 'CRDB Bank',
-            insurance: 'AAR Insurance'
-        };
-        setUser({
-            name: names[type],
-            type: type
+    useEffect(() => {
+        // Check if user is logged in
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
         });
-    };
 
-    if (!userType) {
-        return (
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                minHeight: '100vh',
-                flexDirection: 'column',
-                gap: '2rem'
-            }}>
-                <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: '3rem', marginBottom: '1rem' }}>
-                    🚗 AutoFinance Hub
-                </h1>
-                <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>
-                    Select your dashboard type
-                </p>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <button className="btn btn-primary" onClick={() => handleLogin('buyer')}>
-                        Buyer Dashboard
-                    </button>
-                    <button className="btn btn-primary" onClick={() => handleLogin('bank')}>
-                        Bank Dashboard
-                    </button>
-                    <button className="btn btn-primary" onClick={() => handleLogin('seller')}>
-                        Seller Dashboard
-                    </button>
-                    <button className="btn btn-primary" onClick={() => handleLogin('insurance')}>
-                        Insurance Dashboard
-                    </button>
-                </div>
-            </div>
-        );
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    if (loading) {
+        return <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100vh',
+            fontSize: '1.5rem',
+            color: '#667eea'
+        }}>Loading...</div>;
     }
 
+    if (!user) {
+        return <Navigate to="/login" />;
+    }
+
+    // Check user type if specified
+    if (allowedUserType && user.user_metadata.user_type !== allowedUserType) {
+        return <Navigate to="/login" />;
+    }
+
+    return children;
+}
+
+// Main App Component
+
+
+// Main App Component
+function App() {
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        console.log('🔄 App component mounted, checking session...');
+        
+        // Check current session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            console.log('📋 Session check result:', session);
+            console.log('👤 User from session:', session?.user);
+            setUser(session?.user ?? null);
+        });
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            console.log('🔔 Auth state changed:', _event);
+            console.log('👤 New user state:', session?.user);
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const handleLogout = async () => {
+        console.log('🚪 Logging out...');
+        await supabase.auth.signOut();
+        setUser(null);
+        window.location.href = '/login';
+    };
+
+    console.log('🎨 Rendering App, current user:', user);
+
     return (
-        <>
-            <TopNav user={user} />
-            <div className="app-layout">
-                {userType === 'buyer' && <BuyerDashboard />}
-                {userType === 'bank' && <BankDashboard />}
-                {userType === 'seller' && <SellerDashboard />}
-                {userType === 'insurance' && <InsuranceDashboard />}
-            </div>
-        </>
+        <Router>
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Protected Routes */}
+                <Route 
+                    path="/buyer-dashboard" 
+                    element={
+                        <ProtectedRoute allowedUserType="buyer">
+                            <>
+                                <TopNav user={user} onLogout={handleLogout} />
+                                <div className="app-layout">
+                                    <BuyerDashboard />
+                                </div>
+                            </>
+                        </ProtectedRoute>
+                    } 
+                />
+                
+                <Route 
+                    path="/bank-dashboard" 
+                    element={
+                        <ProtectedRoute allowedUserType="bank">
+                            <>
+                                <TopNav user={user} onLogout={handleLogout} />
+                                <div className="app-layout">
+                                    <BankDashboard />
+                                </div>
+                            </>
+                        </ProtectedRoute>
+                    } 
+                />
+                
+                <Route 
+                    path="/seller-dashboard" 
+                    element={
+                        <ProtectedRoute allowedUserType="seller">
+                            <>
+                                <TopNav user={user} onLogout={handleLogout} />
+                                <div className="app-layout">
+                                    <SellerDashboard />
+                                </div>
+                            </>
+                        </ProtectedRoute>
+                    } 
+                />
+                
+                <Route 
+                    path="/insurance-dashboard" 
+                    element={
+                        <ProtectedRoute allowedUserType="insurance">
+                            <>
+                                <TopNav user={user} onLogout={handleLogout} />
+                                <div className="app-layout">
+                                    <InsuranceDashboard />
+                                </div>
+                            </>
+                        </ProtectedRoute>
+                    } 
+                />
+                
+                {/* Default Route */}
+                <Route path="/" element={<Navigate to="/login" />} />
+            </Routes>
+        </Router>
     );
 }
+
 
 export default App;

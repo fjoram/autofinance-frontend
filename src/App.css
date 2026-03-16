@@ -119,6 +119,26 @@ body {
     gap: 1rem;
 }
 
+
+.user-menu button {
+    margin-left: 1rem !important;
+    padding: 0.75rem 1.5rem !important;
+    background: rgba(255,255,255,0.3) !important;
+    border: 2px solid rgba(255,255,255,0.5) !important;
+    border-radius: 8px !important;
+    color: white !important;
+    cursor: pointer !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    display: inline-block !important;
+}
+
+.user-menu button:hover {
+    background: rgba(255,255,255,0.4) !important;
+}
+
+
+
 .user-avatar {
     width: 36px;
     height: 36px;
@@ -514,4 +534,27 @@ body {
     .nav-links {
         display: none;
     }
+}
+
+/* LOGOUT BUTTON FIX - ADD AT THE BOTTOM */
+.user-menu button {
+    padding: 10px 24px !important;
+    background-color: #ffffff !important;
+    border: 2px solid rgba(255,255,255,0.9) !important;
+    border-radius: 8px !important;
+    color: #667eea !important;
+    cursor: pointer !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    transition: all 0.2s ease !important;
+    margin-left: 0 !important;
+}
+
+.user-menu button:hover {
+    background-color: #f8f9ff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
 }
