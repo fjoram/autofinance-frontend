@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import './Auth.css';
 
+// TODO: BEFORE PRODUCTION LAUNCH
+// Re-enable email confirmation in Supabase:
+// 1. Supabase → Authentication → Providers → Email → Turn ON "Confirm email"
+// 2. Remove "emailRedirectTo: undefined" from signUp options below
+// 3. Set up SendGrid or AWS SES for reliable email delivery
+// 4. Test email flow thoroughly
+
 function Register() {
     const [userType, setUserType] = useState('buyer');
     const [formData, setFormData] = useState({
@@ -41,6 +48,8 @@ function Register() {
         }
 
         try {
+            console.log('🔄 Starting registration for:', formData.email);
+
             // Step 1: Register user with Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
@@ -48,11 +57,14 @@ function Register() {
                 options: {
                     data: {
                         first_name: formData.firstName,
-                        last_name: formData.lastName,
-                        full_name: `${formData.firstName} ${formData.lastName}`,
+                        last_name: formData.lastName || '',
+                        full_name: userType === 'buyer' 
+                            ? `${formData.firstName} ${formData.lastName}`
+                            : formData.firstName,
                         phone: formData.phone,
                         user_type: userType
-                    }
+                    },
+                    emailRedirectTo: undefined  // Skip email confirmation during development
                 }
             });
 
@@ -62,24 +74,44 @@ function Register() {
                 throw new Error('User creation failed - no user data returned');
             }
 
-            console.log('User created in Auth:', authData.user.id);
+            console.log('✅ Auth user created:', authData.user.id);
 
-            // Step 2: Create profile based on user type
-            // We'll create profile records WITHOUT the custom users table
-            
+            // Step 2: Create record in custom users table
+            const { error: usersError } = await supabase
+                .from('users')
+                .insert([{
+                    user_id: authData.user.id,
+                    email: formData.email,
+                    user_type: userType,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName || '',
+                    phone: formData.phone,
+                    status: 'pending_verification',
+                    email_verified: false,
+                    phone_verified: false
+                }]);
+
+            if (usersError) {
+                console.error('❌ Users table error:', usersError);
+                throw usersError;
+            }
+
+            console.log('✅ Custom users record created');
+
+            // Step 3: Create profile based on user type
             if (userType === 'buyer') {
-                // Just create buyer profile - no users table needed
                 const { error: profileError } = await supabase
                     .from('buyers')
                     .insert([{
-                        buyer_id: authData.user.id
-                        // All other fields are optional or have defaults
+                        buyer_id: authData.user.id,
+                        user_id: authData.user.id
                     }]);
                 
                 if (profileError) {
-                    console.error('Buyer profile error:', profileError);
-                    // Don't throw - auth user is created, this is just profile
+                    console.error('❌ Buyer profile error:', profileError);
+                    throw profileError;
                 }
+                console.log('✅ Buyer profile created');
             }
 
             if (userType === 'seller') {
@@ -87,13 +119,16 @@ function Register() {
                     .from('sellers')
                     .insert([{
                         seller_id: authData.user.id,
-                        business_name: `${formData.firstName} ${formData.lastName}`,
+                        user_id: authData.user.id,
+                        business_name: formData.firstName,  // firstName contains business name
                         business_type: 'dealer'
                     }]);
                 
                 if (profileError) {
-                    console.error('Seller profile error:', profileError);
+                    console.error('❌ Seller profile error:', profileError);
+                    throw profileError;
                 }
+                console.log('✅ Seller profile created');
             }
 
             if (userType === 'bank') {
@@ -101,12 +136,18 @@ function Register() {
                     .from('banks')
                     .insert([{
                         bank_id: authData.user.id,
-                        bank_name: `${formData.firstName} ${formData.lastName}`
+                        user_id: authData.user.id,
+                        bank_name: formData.firstName,  // firstName contains bank name
+                        bank_code: formData.firstName.substring(0, 10).toUpperCase().replace(/\s/g, ''),
+                        is_active: true,
+                        verification_status: 'pending'
                     }]);
                 
                 if (profileError) {
-                    console.error('Bank profile error:', profileError);
+                    console.error('❌ Bank profile error:', profileError);
+                    throw profileError;
                 }
+                console.log('✅ Bank profile created');
             }
 
             if (userType === 'insurance') {
@@ -114,15 +155,19 @@ function Register() {
                     .from('insurance_companies')
                     .insert([{
                         insurance_id: authData.user.id,
-                        company_name: `${formData.firstName} ${formData.lastName}`
+                        user_id: authData.user.id,
+                        company_name: formData.firstName  // firstName contains company name
                     }]);
                 
                 if (profileError) {
-                    console.error('Insurance profile error:', profileError);
+                    console.error('❌ Insurance profile error:', profileError);
+                    throw profileError;
                 }
+                console.log('✅ Insurance profile created');
             }
 
-            setMessage('✅ Registration successful! You can now login.');
+            console.log('🎉 Registration completed successfully!');
+            setMessage('✅ Registration successful! Redirecting to login...');
             
             // Clear form
             setFormData({
@@ -140,7 +185,7 @@ function Register() {
             }, 2000);
             
         } catch (error) {
-            console.error('Registration error:', error);
+            console.error('❌ Registration error:', error);
             setMessage('❌ Error: ' + error.message);
         } finally {
             setLoading(false);
@@ -184,31 +229,75 @@ function Register() {
                     </button>
                 </div>
 
-                {/* Registration Form */}
+                {/* Registration Form - DYNAMIC FIELDS */}
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>First Name</label>
-                        <input
-                            type="text"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter your first name"
-                        />
-                    </div>
+                    {userType === 'buyer' ? (
+                        // BUYER: First Name + Last Name
+                        <>
+                            <div className="form-group">
+                                <label>First Name</label>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="Enter your first name"
+                                />
+                            </div>
 
-                    <div className="form-group">
-                        <label>Last Name</label>
-                        <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter your last name"
-                        />
-                    </div>
+                            <div className="form-group">
+                                <label>Last Name</label>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="Enter your last name"
+                                />
+                            </div>
+                        </>
+                    ) : userType === 'seller' ? (
+                        // SELLER: Business Name
+                        <div className="form-group">
+                            <label>Business Name</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g., Premium Motors Ltd"
+                            />
+                        </div>
+                    ) : userType === 'bank' ? (
+                        // BANK: Bank Name
+                        <div className="form-group">
+                            <label>Bank Name</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g., CRDB Bank, NMB Bank"
+                            />
+                        </div>
+                    ) : (
+                        // INSURANCE: Company Name
+                        <div className="form-group">
+                            <label>Company Name</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g., AAR Insurance"
+                            />
+                        </div>
+                    )}
 
                     <div className="form-group">
                         <label>Email</label>
