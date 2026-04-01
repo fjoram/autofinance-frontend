@@ -3947,7 +3947,7 @@ function AddCarModal({ car, onClose, onSuccess }) {
                 fuel_type: formData.fuel_type,
                 body_type: formData.body_type,
                 color: formData.color,
-                engine_size: formData.engine_size || null,
+                engine_size: formData.engine_size ? parseFloat(formData.engine_size) : null,
                 condition: formData.condition,
                 location_city: formData.location_city,
                 location_region: formData.location_region,
@@ -4247,11 +4247,14 @@ function AddCarModal({ car, onClose, onSuccess }) {
                             <div className="form-group">
                                 <label>Engine Size</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="10"
                                     className="form-input"
                                     value={formData.engine_size}
                                     onChange={(e) => setFormData({...formData, engine_size: e.target.value})}
-                                    placeholder="e.g., 2.0L, 3.5L V6"
+                                    placeholder="e.g., 2.0 (litres)"
                                 />
                             </div>
 
