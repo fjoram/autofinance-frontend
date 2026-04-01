@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import './Public.css';
 
 function PublicNav() {
     const [user, setUser] = useState(null);
@@ -17,6 +18,12 @@ function PublicNav() {
         return () => subscription.unsubscribe();
     }, []);
 
+    // Close mobile menu on route change
+    const handleNav = (path) => {
+        setMenuOpen(false);
+        navigate(path);
+    };
+
     const getDashboardPath = () => {
         const type = user?.user_metadata?.user_type;
         if (type === 'buyer') return '/buyer-dashboard';
@@ -27,16 +34,9 @@ function PublicNav() {
     };
 
     const handleLogout = async () => {
+        setMenuOpen(false);
         await supabase.auth.signOut();
         navigate('/');
-    };
-
-    const linkStyle = {
-        textDecoration: 'none',
-        color: '#525252',
-        fontWeight: 500,
-        fontSize: '0.9375rem',
-        transition: 'color 0.2s'
     };
 
     return (
@@ -58,72 +58,72 @@ function PublicNav() {
                 height: '64px'
             }}>
                 {/* Logo */}
-                <Link to="/" style={{ textDecoration: 'none' }}>
+                <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
                     <div style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0f62fe', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         🚗 AutoFinance
                     </div>
                 </Link>
 
-                {/* Center links */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                    <Link to="/cars" style={linkStyle}>Browse Cars</Link>
-                    <Link to="/how-it-works" style={linkStyle}>How It Works</Link>
-                    <Link to="/about" style={linkStyle}>About</Link>
+                {/* Desktop Center Links */}
+                <div className="pub-nav-links">
+                    <Link to="/cars" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.9375rem' }}>Browse Cars</Link>
+                    <Link to="/how-it-works" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.9375rem' }}>How It Works</Link>
+                    <Link to="/about" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.9375rem' }}>About</Link>
                 </div>
 
-                {/* Right actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {/* Desktop Right Actions */}
+                <div className="pub-nav-actions">
                     {user ? (
                         <>
                             <Link to={getDashboardPath()} style={{
-                                textDecoration: 'none',
-                                background: '#0f62fe',
-                                color: 'white',
-                                padding: '0.5rem 1.25rem',
-                                borderRadius: '4px',
-                                fontWeight: 600,
-                                fontSize: '0.875rem'
-                            }}>
-                                My Dashboard
-                            </Link>
+                                textDecoration: 'none', background: '#0f62fe', color: 'white',
+                                padding: '0.5rem 1.25rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.875rem'
+                            }}>My Dashboard</Link>
                             <button onClick={handleLogout} style={{
-                                background: 'none',
-                                border: '1px solid #e0e0e0',
-                                padding: '0.5rem 1.25rem',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                fontSize: '0.875rem',
-                                color: '#525252'
-                            }}>
-                                Logout
-                            </button>
+                                background: 'none', border: '1px solid #e0e0e0', padding: '0.5rem 1.25rem',
+                                borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#525252'
+                            }}>Logout</button>
                         </>
                     ) : (
                         <>
                             <Link to="/login" style={{
-                                textDecoration: 'none',
-                                color: '#0f62fe',
-                                fontWeight: 600,
-                                fontSize: '0.875rem',
-                                padding: '0.5rem 1rem'
-                            }}>
-                                Login
-                            </Link>
+                                textDecoration: 'none', color: '#0f62fe', fontWeight: 600, fontSize: '0.875rem', padding: '0.5rem 1rem'
+                            }}>Login</Link>
                             <Link to="/register" style={{
-                                textDecoration: 'none',
-                                background: '#0f62fe',
-                                color: 'white',
-                                padding: '0.5rem 1.25rem',
-                                borderRadius: '4px',
-                                fontWeight: 600,
-                                fontSize: '0.875rem'
-                            }}>
-                                Register Free
-                            </Link>
+                                textDecoration: 'none', background: '#0f62fe', color: 'white',
+                                padding: '0.5rem 1.25rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.875rem'
+                            }}>Register Free</Link>
                         </>
                     )}
                 </div>
+
+                {/* Hamburger — mobile only */}
+                <button
+                    className="pub-hamburger"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    aria-label="Toggle menu"
+                    aria-expanded={menuOpen}
+                >
+                    {menuOpen ? '✕' : '☰'}
+                </button>
+            </div>
+
+            {/* Mobile Dropdown Menu */}
+            <div className={`pub-mobile-menu ${menuOpen ? 'open' : ''}`}>
+                <a onClick={() => handleNav('/cars')} style={{ cursor: 'pointer' }}>Browse Cars</a>
+                <a onClick={() => handleNav('/how-it-works')} style={{ cursor: 'pointer' }}>How It Works</a>
+                <a onClick={() => handleNav('/about')} style={{ cursor: 'pointer' }}>About</a>
+                {user ? (
+                    <>
+                        <a onClick={() => handleNav(getDashboardPath())} style={{ cursor: 'pointer' }}>My Dashboard</a>
+                        <a onClick={handleLogout} className="mobile-cta" style={{ cursor: 'pointer' }}>Logout</a>
+                    </>
+                ) : (
+                    <>
+                        <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Login</a>
+                        <a onClick={() => handleNav('/register')} className="mobile-cta" style={{ cursor: 'pointer' }}>Register Free</a>
+                    </>
+                )}
             </div>
         </nav>
     );

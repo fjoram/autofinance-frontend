@@ -1276,8 +1276,10 @@ function AdminDashboard() {
 
 
 function TopNav({ user, onLogout }) {
+    const [mobileOpen, setMobileOpen] = React.useState(false);
+
     return (
-        <nav className="top-nav">
+        <nav className="top-nav" style={{ position: 'relative' }}>
             <div className="nav-container">
                 <div className="logo">
                     <svg width="40" height="40" viewBox="0 0 80 80" style={{ marginRight: '10px' }}>
@@ -1296,9 +1298,8 @@ function TopNav({ user, onLogout }) {
                     AutoFinance Hub
                 </div>
                 <ul className="nav-links">
-                    <li><a href="/">Magari</a></li>
-                    <li><a href="/">Mikopo</a></li>
-                    <li><a href="/">Kuhusu Sisi</a></li>
+                    <li><a href="/cars">Browse</a></li>
+                    <li><a href="/how-it-works">How It Works</a></li>
                 </ul>
                 <div className="user-menu">
                     {user && (
@@ -1306,45 +1307,31 @@ function TopNav({ user, onLogout }) {
                             <div className="user-avatar">
                                 {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'U'}
                             </div>
-                            <span style={{ 
-                                marginRight: '1rem',
-                                color: 'white',
-                                fontWeight: '500'
-                            }}>
+                            <span style={{ marginRight: '1rem', color: 'white', fontWeight: '500' }}>
                                 {user.user_metadata?.full_name || user.email || 'User'}
                             </span>
-                            <button 
-                                onClick={onLogout}
-                                style={{
-                                    padding: '10px 24px',
-                                    backgroundColor: '#ffffff',
-                                    border: '2px solid rgba(255,255,255,0.9)',
-                                    borderRadius: '8px',
-                                    color: '#667eea',  // Purple text - HIGH CONTRAST
-                                    cursor: 'pointer',
-                                    fontWeight: '700',
-                                    fontSize: '14px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                    transition: 'all 0.2s ease',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f8f9ff';
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#ffffff';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                                }}
-                            >
-                                    LOGOUT 
-                            </button>
+                            <button onClick={onLogout} style={{
+                                padding: '10px 24px', backgroundColor: '#ffffff',
+                                border: '2px solid rgba(255,255,255,0.9)', borderRadius: '8px',
+                                color: '#667eea', cursor: 'pointer', fontWeight: '700', fontSize: '14px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'all 0.2s ease',
+                                textTransform: 'uppercase', letterSpacing: '0.5px'
+                            }}>LOGOUT</button>
                         </>
                     )}
                 </div>
+                {/* Hamburger — mobile only */}
+                <button className="top-nav-hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
+                    {mobileOpen ? '✕' : '☰'}
+                </button>
+            </div>
+            {/* Mobile menu */}
+            <div className={`top-nav-mobile-menu ${mobileOpen ? 'open' : ''}`}>
+                <a href="/cars" onClick={() => setMobileOpen(false)}>Browse Cars</a>
+                <a href="/how-it-works" onClick={() => setMobileOpen(false)}>How It Works</a>
+                {user && (
+                    <button onClick={() => { setMobileOpen(false); onLogout(); }}>Logout</button>
+                )}
             </div>
         </nav>
     );
