@@ -111,7 +111,7 @@ function PublicCarDetails() {
             .from('cars')
             .select(`
                 *,
-                seller:sellers(seller_id, business_name, business_type, city, region, verification_status, rating, phone)
+                seller:sellers(seller_id, business_name, business_type, city, region, verification_status, rating)
             `)
             .eq('car_id', id)
             .single();
