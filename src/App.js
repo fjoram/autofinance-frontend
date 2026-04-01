@@ -3324,12 +3324,15 @@ function AddCarModal({ car, onClose, onSuccess }) {
         fuel_type: car?.fuel_type || 'petrol',
         body_type: car?.body_type || 'sedan',
         color: car?.color || '',
+        engine_size: car?.engine_size || '',
         condition: car?.condition || 'used',
         location_city: car?.location_city || '',
         location_region: car?.location_region || '',
         description: car?.description || '',
         images: car?.images || [],
-        features: car?.features || []
+        features: car?.features || [],
+        status: car?.status || 'available',
+        is_featured: car?.is_featured || false
     });
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -3443,13 +3446,15 @@ function AddCarModal({ car, onClose, onSuccess }) {
                 fuel_type: formData.fuel_type,
                 body_type: formData.body_type,
                 color: formData.color,
+                engine_size: formData.engine_size || null,
                 condition: formData.condition,
                 location_city: formData.location_city,
                 location_region: formData.location_region,
                 description: formData.description,
                 images: imageUrls,
                 features: formData.features.length > 0 ? formData.features : [],
-                status: 'available'
+                status: formData.status,
+                is_featured: formData.is_featured
             };
 
             if (car) {
@@ -3708,7 +3713,7 @@ function AddCarModal({ car, onClose, onSuccess }) {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div className="form-group">
                                 <label>Body Type *</label>
                                 <select
@@ -3735,6 +3740,17 @@ function AddCarModal({ car, onClose, onSuccess }) {
                                     onChange={(e) => setFormData({...formData, color: e.target.value})}
                                     required
                                     placeholder="e.g., White"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Engine Size</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={formData.engine_size}
+                                    onChange={(e) => setFormData({...formData, engine_size: e.target.value})}
+                                    placeholder="e.g., 2.0L, 3.5L V6"
                                 />
                             </div>
 
@@ -3792,6 +3808,36 @@ function AddCarModal({ car, onClose, onSuccess }) {
                                 rows="4"
                                 placeholder="Describe the car's condition, history, special features..."
                             ></textarea>
+                        </div>
+
+                        {/* Listing Options */}
+                        <h3 style={{ marginBottom: '1rem', fontSize: '16px', fontWeight: '600' }}>Listing Options</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div className="form-group">
+                                <label>Publish Status *</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                    required
+                                >
+                                    <option value="available">Published (Available)</option>
+                                    <option value="draft">Draft (Hidden)</option>
+                                    <option value="reserved">Reserved</option>
+                                    <option value="sold">Sold</option>
+                                </select>
+                            </div>
+                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '1.5rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.is_featured}
+                                        onChange={(e) => setFormData({...formData, is_featured: e.target.checked})}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    Mark as Featured Listing
+                                </label>
+                            </div>
                         </div>
 
                         {/* Features */}
@@ -4074,6 +4120,7 @@ function SellerDashboard() {
     const [view, setView] = useState('dashboard');
     const [cars, setCars] = useState([]);
     const [applications, setApplications] = useState([]);
+    const [salesTrend, setSalesTrend] = useState([]);
     const [stats, setStats] = useState({
         totalCars: 0,
         activeCars: 0,
@@ -4084,6 +4131,8 @@ function SellerDashboard() {
     const [loading, setLoading] = useState(true);
     const [showAddCarModal, setShowAddCarModal] = useState(false);
     const [editingCar, setEditingCar] = useState(null);
+    const [appFilterCar, setAppFilterCar] = useState('all');
+    const [appFilterStatus, setAppFilterStatus] = useState('all');
 
     useEffect(() => {
         fetchSellerData();
@@ -4154,6 +4203,22 @@ function SellerDashboard() {
                 pendingApplications
             });
 
+            // Compute sales trend: applications received per month for past 6 months
+            const now = new Date();
+            const trend = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const monthLabel = d.toLocaleString('default', { month: 'short' });
+                const yr = d.getFullYear();
+                const mo = d.getMonth();
+                const count = appsData?.filter(a => {
+                    const appDate = new Date(a.submitted_at);
+                    return appDate.getFullYear() === yr && appDate.getMonth() === mo;
+                }).length || 0;
+                trend.push({ month: monthLabel, count });
+            }
+            setSalesTrend(trend);
+
         } catch (error) {
             console.error('Error fetching seller data:', error);
             alert('Error loading data');
@@ -4188,6 +4253,20 @@ function SellerDashboard() {
         } catch (error) {
             console.error('Error deleting car:', error);
             alert('❌ Error deleting car');
+        }
+    };
+
+    const handleStatusChange = async (carId, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('cars')
+                .update({ status: newStatus })
+                .eq('car_id', carId);
+            if (error) throw error;
+            fetchSellerData();
+        } catch (error) {
+            console.error('Error updating car status:', error);
+            alert('❌ Error updating status');
         }
     };
 
@@ -4235,6 +4314,68 @@ function SellerDashboard() {
                                     </div>
                                 </div>
 
+                                {/* Sales Trend Chart */}
+                                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                                    <h3 className="card-title" style={{ marginBottom: '1.5rem' }}>Applications Trend (Last 6 Months)</h3>
+                                    {salesTrend.length > 0 && (() => {
+                                        const maxCount = Math.max(...salesTrend.map(t => t.count), 1);
+                                        return (
+                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '160px', padding: '0 0.5rem' }}>
+                                                {salesTrend.map((item, idx) => (
+                                                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#667eea' }}>{item.count}</span>
+                                                        <div style={{
+                                                            width: '100%',
+                                                            height: `${Math.max((item.count / maxCount) * 120, 4)}px`,
+                                                            background: 'linear-gradient(180deg, #667eea, #764ba2)',
+                                                            borderRadius: '4px 4px 0 0',
+                                                            transition: 'height 0.3s ease'
+                                                        }} />
+                                                        <span style={{ fontSize: '12px', color: '#6c757d' }}>{item.month}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Recent Applications */}
+                                {applications.length > 0 && (
+                                    <div className="card" style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h3 className="card-title">Recent Applications</h3>
+                                            <button className="btn btn-sm btn-outline" onClick={() => setView('applications')}>View All</button>
+                                        </div>
+                                        <table className="comparison-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Car</th>
+                                                    <th>Buyer</th>
+                                                    <th>Loan Amount</th>
+                                                    <th>Status</th>
+                                                    <th>Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {applications.slice(0, 5).map(app => (
+                                                    <tr key={app.application_id}>
+                                                        <td>{app.car?.make} {app.car?.model} {app.car?.year}</td>
+                                                        <td>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</td>
+                                                        <td>TZS {parseFloat(app.loan_amount || 0).toLocaleString()}</td>
+                                                        <td>
+                                                            <span className={`badge badge-${
+                                                                app.status === 'approved' || app.status === 'disbursed' ? 'success' :
+                                                                app.status === 'rejected' ? 'danger' : 'warning'
+                                                            }`}>{app.status}</span>
+                                                        </td>
+                                                        <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
                                 <div className="card">
                                     <h3 className="card-title">Your Listings</h3>
                                     {cars.length === 0 ? (
@@ -4254,11 +4395,11 @@ function SellerDashboard() {
 									  <div className="cars-grid">
     {cars.map(car => (
       <div key={car.car_id} className="car-card">
-            <div 
+            <div
                 className="car-image"
                 style={{
-                    backgroundImage: car.images && car.images.length > 0 
-                        ? `url(${car.images[0]})` 
+                    backgroundImage: car.images && car.images.length > 0
+                        ? `url(${car.images[0]})`
                         : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -4266,7 +4407,19 @@ function SellerDashboard() {
                 }}
             >
                 {(!car.images || car.images.length === 0) && '🚗'}
-                <span className="car-badge">{car.status}</span>
+                <span className="car-badge" style={{
+                    background: car.status === 'available' ? '#24a148' :
+                                car.status === 'reserved' ? '#f59e0b' :
+                                car.status === 'sold' ? '#dc3545' :
+                                car.status === 'draft' ? '#6c757d' : '#667eea'
+                }}>{car.status}</span>
+                {car.is_featured && (
+                    <span style={{
+                        position: 'absolute', top: '8px', left: '8px',
+                        background: '#f59e0b', color: 'white',
+                        padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600'
+                    }}>⭐ Featured</span>
+                )}
             </div>
             <div className="car-details">
                 <h3 className="car-title">{car.year} {car.make} {car.model}</h3>
@@ -4275,14 +4428,28 @@ function SellerDashboard() {
                     <span className="spec-item">📍 {car.location_city}</span>
                     <span className="spec-item">👁️ {car.views_count || 0} views</span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <button 
+                <div style={{ marginTop: '0.75rem' }}>
+                    <label style={{ fontSize: '12px', color: '#6c757d', display: 'block', marginBottom: '4px' }}>Status</label>
+                    <select
+                        value={car.status}
+                        onChange={(e) => handleStatusChange(car.car_id, e.target.value)}
+                        style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid #dee2e6', fontSize: '13px' }}
+                    >
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="sold">Sold</option>
+                        <option value="draft">Draft</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <button
                         className="btn btn-sm btn-outline"
                         onClick={() => handleEditCar(car)}
                     >
                         Edit
                     </button>
-                    <button 
+                    <button
                         className="btn btn-sm btn-outline"
                         onClick={() => handleDeleteCar(car.car_id)}
                         style={{ color: '#dc3545' }}
@@ -4312,48 +4479,105 @@ function SellerDashboard() {
                             <h1 className="card-title">Applications for Your Cars</h1>
                         </div>
 
-                        <div className="card">
-                            {applications.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: '#6c757d' }}>
-                                    No applications yet.
-                                </div>
-                            ) : (
-                                <table className="comparison-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Car</th>
-                                            <th>Buyer</th>
-                                            <th>Bank</th>
-                                            <th>Loan Amount</th>
-                                            <th>Status</th>
-                                            <th>Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {applications.map(app => (
-                                            <tr key={app.application_id}>
-                                                <td>
-                                                    {app.car_make} {app.car_model} {app.car_year}
-                                                </td>
-                                                <td>
-                                                    {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
-                                                </td>
-                                                <td>{app.bank?.bank_name}</td>
-                                                <td>TZS {parseFloat(app.loan_amount).toLocaleString()}</td>
-                                                <td>
-                                                    <span className={`badge badge-${
-                                                        app.status === 'approved' ? 'success' :
-                                                        app.status === 'rejected' ? 'danger' : 'warning'
-                                                    }`}>
-                                                        {app.status}
-                                                    </span>
-                                                </td>
-                                                <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
-                                            </tr>
+                        {/* Filters */}
+                        <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                <div className="form-group" style={{ marginBottom: 0, flex: '1', minWidth: '200px' }}>
+                                    <label style={{ fontSize: '13px' }}>Filter by Car</label>
+                                    <select
+                                        className="form-select"
+                                        value={appFilterCar}
+                                        onChange={(e) => setAppFilterCar(e.target.value)}
+                                    >
+                                        <option value="all">All Cars</option>
+                                        {cars.map(car => (
+                                            <option key={car.car_id} value={car.car_id}>
+                                                {car.year} {car.make} {car.model}
+                                            </option>
                                         ))}
-                                    </tbody>
-                                </table>
-                            )}
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: 0, flex: '1', minWidth: '160px' }}>
+                                    <label style={{ fontSize: '13px' }}>Filter by Status</label>
+                                    <select
+                                        className="form-select"
+                                        value={appFilterStatus}
+                                        onChange={(e) => setAppFilterStatus(e.target.value)}
+                                    >
+                                        <option value="all">All Statuses</option>
+                                        <option value="submitted">Submitted</option>
+                                        <option value="under_review">Under Review</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                        <option value="disbursed">Disbursed</option>
+                                    </select>
+                                </div>
+                                <button
+                                    className="btn btn-sm btn-outline"
+                                    onClick={() => { setAppFilterCar('all'); setAppFilterStatus('all'); }}
+                                    style={{ marginBottom: '2px' }}
+                                >
+                                    Clear Filters
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="card">
+                            {(() => {
+                                const filtered = applications.filter(app => {
+                                    const carMatch = appFilterCar === 'all' || app.car_id === appFilterCar;
+                                    const statusMatch = appFilterStatus === 'all' || app.status === appFilterStatus;
+                                    return carMatch && statusMatch;
+                                });
+                                return filtered.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '3rem', color: '#6c757d' }}>
+                                        No applications found.
+                                    </div>
+                                ) : (
+                                    <table className="comparison-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Car</th>
+                                                <th>Buyer</th>
+                                                <th>Contact</th>
+                                                <th>Bank</th>
+                                                <th>Loan Amount</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filtered.map(app => (
+                                                <tr key={app.application_id}>
+                                                    <td>{app.car?.make} {app.car?.model} {app.car?.year}</td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '500' }}>
+                                                            {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '13px' }}>
+                                                            {app.buyer?.user?.phone && <div>📞 {app.buyer.user.phone}</div>}
+                                                            {app.buyer?.user?.email && <div>✉️ {app.buyer.user.email}</div>}
+                                                        </div>
+                                                    </td>
+                                                    <td>{app.bank?.bank_name}</td>
+                                                    <td>TZS {parseFloat(app.loan_amount || 0).toLocaleString()}</td>
+                                                    <td>
+                                                        <span className={`badge badge-${
+                                                            app.status === 'approved' || app.status === 'disbursed' ? 'success' :
+                                                            app.status === 'rejected' ? 'danger' : 'warning'
+                                                        }`}>
+                                                            {app.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                );
+                            })()}
                         </div>
                     </>
                 )}
