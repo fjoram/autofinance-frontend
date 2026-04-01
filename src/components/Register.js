@@ -17,7 +17,10 @@ function Register() {
         confirmPassword: '',
         firstName: '',
         lastName: '',
-        phone: ''
+        phone: '',
+        city: '',
+        region: '',
+        address: ''
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -121,7 +124,10 @@ function Register() {
                         seller_id: authData.user.id,
                         user_id: authData.user.id,
                         business_name: formData.firstName,  // firstName contains business name
-                        business_type: 'dealer'
+                        business_type: 'dealer',
+                        city: formData.city,
+                        region: formData.region,
+                        address: formData.address
                     }]);
                 
                 if (profileError) {
@@ -176,7 +182,10 @@ function Register() {
                 confirmPassword: '',
                 firstName: '',
                 lastName: '',
-                phone: ''
+                phone: '',
+                city: '',
+                region: '',
+                address: ''
             });
 
             // Auto redirect to login after 2 seconds
@@ -259,18 +268,53 @@ function Register() {
                             </div>
                         </>
                     ) : userType === 'seller' ? (
-                        // SELLER: Business Name
-                        <div className="form-group">
-                            <label>Business Name</label>
-                            <input
-                                type="text"
-                                name="firstName"
-                                value={formData.firstName}
-                                onChange={handleChange}
-                                required
-                                placeholder="e.g., Premium Motors Ltd"
-                            />
-                        </div>
+                        // SELLER: Business Name + Location fields
+                        <>
+                            <div className="form-group">
+                                <label>Business Name</label>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g., Premium Motors Ltd"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>City</label>
+                                <input
+                                    type="text"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g., Dar es Salaam"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Region</label>
+                                <input
+                                    type="text"
+                                    name="region"
+                                    value={formData.region}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g., Dar es Salaam Region"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Address</label>
+                                <input
+                                    type="text"
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g., Mikocheni, Ali Hassan Mwinyi Rd"
+                                />
+                            </div>
+                        </>
                     ) : userType === 'bank' ? (
                         // BANK: Bank Name
                         <div className="form-group">
