@@ -2959,6 +2959,15 @@ function BankDashboard() {
 
     const handleApprove = async (appId) => {
         try {
+            // Fetch car_id before updating so we can auto-reserve
+            const { data: appData, error: fetchError } = await supabase
+                .from('loan_applications')
+                .select('car_id')
+                .eq('application_id', appId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
             const { error } = await supabase
                 .from('loan_applications')
                 .update({
@@ -2969,9 +2978,19 @@ function BankDashboard() {
 
             if (error) throw error;
 
-            alert('✅ Application approved successfully!');
+            // Auto-reserve the car when loan is approved
+            if (appData?.car_id) {
+                const { error: carError } = await supabase
+                    .from('cars')
+                    .update({ status: 'reserved' })
+                    .eq('car_id', appData.car_id);
+
+                if (carError) console.error('Warning: Could not auto-reserve car:', carError);
+            }
+
+            alert('✅ Application approved! Car has been automatically reserved.');
             setSelectedApplication(null);
-            fetchApplications(); // Refresh list
+            fetchApplications();
         } catch (error) {
             console.error('Error approving application:', error);
             alert('❌ Error approving application');
