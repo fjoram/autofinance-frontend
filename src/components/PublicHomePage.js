@@ -1,0 +1,417 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import PublicNav from './PublicNav';
+
+const TESTIMONIALS = [
+    {
+        name: 'Amina Hassan',
+        role: 'Buyer · Dar es Salaam',
+        text: 'I got my Toyota Prado within 3 weeks. The loan comparison tool saved me millions — I found a rate 3% lower than my bank offered.',
+        initials: 'AH'
+    },
+    {
+        name: 'John Mwangi',
+        role: 'Buyer · Arusha',
+        text: 'Never thought buying a car could be this easy. Applied for financing, got approved, and drove away. Amazing platform.',
+        initials: 'JM'
+    },
+    {
+        name: 'Grace Kimaro',
+        role: 'Seller · Mwanza',
+        text: 'My dealership has sold 12 cars through AutoFinance this quarter. The seller dashboard makes it effortless to manage listings.',
+        initials: 'GK'
+    }
+];
+
+const HOW_IT_WORKS = [
+    {
+        step: '01',
+        icon: '🔍',
+        title: 'Browse & Choose',
+        desc: 'Search thousands of verified cars. Filter by make, price, location, and more — no account needed.'
+    },
+    {
+        step: '02',
+        icon: '🏦',
+        title: 'Compare & Apply',
+        desc: 'Use our loan calculator to compare rates from 8+ banks instantly. Apply for financing in under 5 minutes.'
+    },
+    {
+        step: '03',
+        icon: '🚗',
+        title: 'Get Your Car',
+        desc: 'Once approved, the seller reserves your car. Funds are disbursed directly and you drive away.'
+    }
+];
+
+function PublicHomePage() {
+    const [search, setSearch] = useState('');
+    const [featuredCars, setFeaturedCars] = useState([]);
+    const [stats, setStats] = useState({ cars: 0, banks: 0, applications: 0 });
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        fetchFeaturedCars();
+        fetchStats();
+    }, []);
+
+    const fetchFeaturedCars = async () => {
+        const { data } = await supabase
+            .from('cars')
+            .select('car_id, make, model, year, price, mileage, location_city, images, condition, is_featured, body_type')
+            .eq('status', 'available')
+            .order('is_featured', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(6);
+        setFeaturedCars(data || []);
+    };
+
+    const fetchStats = async () => {
+        const [{ count: cars }, { count: banks }, { count: apps }] = await Promise.all([
+            supabase.from('cars').select('*', { count: 'exact', head: true }).eq('status', 'available'),
+            supabase.from('banks').select('*', { count: 'exact', head: true }).eq('is_active', true),
+            supabase.from('loan_applications').select('*', { count: 'exact', head: true })
+        ]);
+        setStats({ cars: cars || 0, banks: banks || 0, applications: apps || 0 });
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        navigate(`/cars${search ? `?search=${encodeURIComponent(search)}` : ''}`);
+    };
+
+    return (
+        <div style={{ background: '#f4f4f4', minHeight: '100vh' }}>
+            <PublicNav />
+
+            {/* HERO */}
+            <section style={{
+                background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
+                padding: '5rem 2rem 6rem',
+                color: 'white',
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '1rem' }}>
+                        Tanzania's #1 Auto Finance Platform
+                    </div>
+                    <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1.5rem' }}>
+                        Find Your Dream Car.<br />Finance It in Minutes.
+                    </h1>
+                    <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '2.5rem', maxWidth: '560px', margin: '0 auto 2.5rem' }}>
+                        Browse thousands of verified cars and compare financing from Tanzania's top banks — all in one place.
+                    </p>
+
+                    {/* Search Bar */}
+                    <form onSubmit={handleSearch} style={{ display: 'flex', maxWidth: '600px', margin: '0 auto', gap: '0.5rem' }}>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search by make, model, or location..."
+                            style={{
+                                flex: 1,
+                                padding: '1rem 1.25rem',
+                                borderRadius: '4px',
+                                border: 'none',
+                                fontSize: '1rem',
+                                outline: 'none',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            }}
+                        />
+                        <button type="submit" style={{
+                            background: '#f59e0b',
+                            color: 'white',
+                            border: 'none',
+                            padding: '1rem 1.75rem',
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            Search Cars
+                        </button>
+                    </form>
+
+                    <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', opacity: 0.8, fontSize: '0.875rem' }}>
+                        <span>🚗 Toyota</span>
+                        <span>🚗 BMW</span>
+                        <span>🚗 Mercedes</span>
+                        <span>🚗 Honda</span>
+                        <span>🚗 Nissan</span>
+                    </div>
+                </div>
+            </section>
+
+            {/* STATS BAR */}
+            <section style={{ background: 'white', padding: '2rem', borderBottom: '1px solid #e0e0e0' }}>
+                <div style={{
+                    maxWidth: '900px',
+                    margin: '0 auto',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '2rem',
+                    textAlign: 'center'
+                }}>
+                    {[
+                        { value: `${stats.cars}+`, label: 'Cars Available', icon: '🚗' },
+                        { value: `${stats.banks}+`, label: 'Partner Banks', icon: '🏦' },
+                        { value: `${stats.applications}+`, label: 'Applications Processed', icon: '📋' }
+                    ].map((stat, i) => (
+                        <div key={i}>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{stat.icon}</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f62fe' }}>{stat.value}</div>
+                            <div style={{ color: '#6f6f6f', fontSize: '0.9375rem', fontWeight: 500 }}>{stat.label}</div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* FEATURED CARS */}
+            <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2rem' }}>
+                    <div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>Featured Cars</h2>
+                        <p style={{ color: '#6f6f6f', marginTop: '0.25rem' }}>Handpicked listings from verified sellers</p>
+                    </div>
+                    <Link to="/cars" style={{ color: '#0f62fe', textDecoration: 'none', fontWeight: 600 }}>View all cars →</Link>
+                </div>
+
+                {featuredCars.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: '#6f6f6f' }}>
+                        Loading cars...
+                    </div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {featuredCars.map(car => (
+                            <div
+                                key={car.car_id}
+                                onClick={() => navigate(`/cars/${car.car_id}`)}
+                                style={{
+                                    background: 'white',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.25s ease'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
+                            >
+                                <div style={{
+                                    width: '100%',
+                                    height: '200px',
+                                    background: car.images?.[0] ? `url(${car.images[0]}) center/cover no-repeat` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '4rem',
+                                    position: 'relative'
+                                }}>
+                                    {!car.images?.[0] && '🚗'}
+                                    {car.is_featured && (
+                                        <span style={{
+                                            position: 'absolute', top: '0.75rem', left: '0.75rem',
+                                            background: '#f59e0b', color: 'white',
+                                            padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700
+                                        }}>⭐ Featured</span>
+                                    )}
+                                    <span style={{
+                                        position: 'absolute', top: '0.75rem', right: '0.75rem',
+                                        background: '#24a148', color: 'white',
+                                        padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600
+                                    }}>{car.condition === 'certified_pre_owned' ? 'CPO' : car.condition}</span>
+                                </div>
+                                <div style={{ padding: '1.25rem' }}>
+                                    <h3 style={{ fontWeight: 700, fontSize: '1.0625rem', marginBottom: '0.5rem' }}>
+                                        {car.year} {car.make} {car.model}
+                                    </h3>
+                                    <div style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0f62fe', marginBottom: '0.75rem' }}>
+                                        TZS {car.price?.toLocaleString()}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem', color: '#6f6f6f', fontSize: '0.8125rem' }}>
+                                        <span>📍 {car.location_city}</span>
+                                        <span>🏎️ {car.mileage?.toLocaleString()} km</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
+                    <button onClick={() => navigate('/cars')} style={{
+                        background: '#0f62fe', color: 'white', border: 'none',
+                        padding: '0.875rem 2.5rem', borderRadius: '4px', fontWeight: 700,
+                        fontSize: '1rem', cursor: 'pointer'
+                    }}>
+                        Browse All Cars
+                    </button>
+                </div>
+            </section>
+
+            {/* HOW IT WORKS */}
+            <section style={{ background: 'white', padding: '5rem 2rem' }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>How AutoFinance Works</h2>
+                        <p style={{ color: '#6f6f6f', marginTop: '0.5rem', fontSize: '1.0625rem' }}>
+                            From browsing to driving — in 3 simple steps
+                        </p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2.5rem' }}>
+                        {HOW_IT_WORKS.map((step, i) => (
+                            <div key={i} style={{ textAlign: 'center', padding: '0 1rem' }}>
+                                <div style={{
+                                    width: '72px', height: '72px', borderRadius: '50%',
+                                    background: '#e8f0ff', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1.25rem'
+                                }}>
+                                    {step.icon}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f62fe', letterSpacing: '2px', marginBottom: '0.5rem' }}>
+                                    STEP {step.step}
+                                </div>
+                                <h3 style={{ fontSize: '1.1875rem', fontWeight: 700, marginBottom: '0.75rem', color: '#161616' }}>
+                                    {step.title}
+                                </h3>
+                                <p style={{ color: '#6f6f6f', lineHeight: 1.6, fontSize: '0.9375rem' }}>
+                                    {step.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* TRUST INDICATORS */}
+            <section style={{ background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 100%)', padding: '4rem 2rem', color: 'white' }}>
+                <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+                        Trusted by Thousands of Tanzanians
+                    </h2>
+                    <p style={{ opacity: 0.85, fontSize: '1.0625rem', marginBottom: '3rem' }}>
+                        We partner with Tanzania's leading financial institutions to bring you the best rates
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        {['CRDB Bank', 'NMB Bank', 'Stanbic', 'Equity Bank', 'DTB Bank', 'KCB Bank', 'Absa', 'NBC Bank'].map(bank => (
+                            <div key={bank} style={{
+                                background: 'rgba(255,255,255,0.15)',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                padding: '0.625rem 1.25rem',
+                                borderRadius: '4px',
+                                fontWeight: 600,
+                                fontSize: '0.875rem'
+                            }}>{bank}</div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* TESTIMONIALS */}
+            <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 2rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>What Our Customers Say</h2>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                    {TESTIMONIALS.map((t, i) => (
+                        <div key={i} style={{
+                            background: 'white', borderRadius: '8px', padding: '2rem',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                        }}>
+                            <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#f59e0b' }}>★★★★★</div>
+                            <p style={{ color: '#525252', lineHeight: 1.7, marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+                                "{t.text}"
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{
+                                    width: '40px', height: '40px', borderRadius: '50%',
+                                    background: '#0f62fe', color: 'white',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: 700, fontSize: '0.875rem'
+                                }}>{t.initials}</div>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{t.name}</div>
+                                    <div style={{ color: '#6f6f6f', fontSize: '0.8125rem' }}>{t.role}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* CTA BANNER */}
+            <section style={{ background: '#f4f4f4', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616', marginBottom: '1rem' }}>
+                        Ready to Find Your Car?
+                    </h2>
+                    <p style={{ color: '#6f6f6f', marginBottom: '2rem', fontSize: '1.0625rem' }}>
+                        Browse free, compare financing, register only when you're ready to apply.
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button onClick={() => navigate('/cars')} style={{
+                            background: '#0f62fe', color: 'white', border: 'none',
+                            padding: '0.875rem 2rem', borderRadius: '4px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer'
+                        }}>
+                            Browse Cars
+                        </button>
+                        <button onClick={() => navigate('/register')} style={{
+                            background: 'white', color: '#0f62fe', border: '2px solid #0f62fe',
+                            padding: '0.875rem 2rem', borderRadius: '4px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer'
+                        }}>
+                            Create Free Account
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* FOOTER */}
+            <footer style={{ background: '#161616', color: '#c6c6c6', padding: '3rem 2rem 2rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
+                        <div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '0.75rem' }}>🚗 AutoFinance</div>
+                            <p style={{ fontSize: '0.875rem', lineHeight: 1.6, color: '#8d8d8d' }}>
+                                Tanzania's premier auto finance platform connecting buyers, sellers, and banks.
+                            </p>
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 700, color: 'white', marginBottom: '0.75rem', fontSize: '0.875rem' }}>Platform</div>
+                            {[['Browse Cars', '/cars'], ['How It Works', '/how-it-works'], ['About Us', '/about']].map(([label, path]) => (
+                                <div key={path} style={{ marginBottom: '0.5rem' }}>
+                                    <Link to={path} style={{ color: '#8d8d8d', textDecoration: 'none', fontSize: '0.875rem' }}>{label}</Link>
+                                </div>
+                            ))}
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 700, color: 'white', marginBottom: '0.75rem', fontSize: '0.875rem' }}>Account</div>
+                            {[['Login', '/login'], ['Register as Buyer', '/register'], ['Sell Your Car', '/register']].map(([label, path]) => (
+                                <div key={label} style={{ marginBottom: '0.5rem' }}>
+                                    <Link to={path} style={{ color: '#8d8d8d', textDecoration: 'none', fontSize: '0.875rem' }}>{label}</Link>
+                                </div>
+                            ))}
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 700, color: 'white', marginBottom: '0.75rem', fontSize: '0.875rem' }}>Contact</div>
+                            <div style={{ fontSize: '0.875rem', color: '#8d8d8d', lineHeight: 1.8 }}>
+                                <div>📧 info@autofinance.co.tz</div>
+                                <div>📞 +255 700 000 000</div>
+                                <div>📍 Dar es Salaam, Tanzania</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid #393939', paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.8125rem', color: '#6f6f6f' }}>
+                        © {new Date().getFullYear()} AutoFinance Tanzania. All rights reserved.
+                    </div>
+                </div>
+            </footer>
+        </div>
+    );
+}
+
+export default PublicHomePage;

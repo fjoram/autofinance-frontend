@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
 import Register from './components/Register';
+import PublicHomePage from './components/PublicHomePage';
+import PublicCarBrowse from './components/PublicCarBrowse';
+import PublicCarDetails from './components/PublicCarDetails';
+import { HowItWorksPage, AboutPage } from './components/PublicInfoPages';
 import './App.css';
 
 // Mock Data
@@ -4778,7 +4782,12 @@ function App() {
     return (
         <Router>
             <Routes>
-                {/* Public Routes */}
+                {/* Public Routes — no auth required */}
+                <Route path="/" element={<PublicHomePage />} />
+                <Route path="/cars" element={<PublicCarBrowse />} />
+                <Route path="/cars/:id" element={<PublicCarDetails />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/about" element={<AboutPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
 				
@@ -4848,8 +4857,8 @@ function App() {
                     } 
                 />
                 
-                {/* Default Route */}
-                <Route path="/" element={<Navigate to="/login" />} />
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </Router>
     );
