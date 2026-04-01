@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import PublicNav from './PublicNav';
+import './Public.css';
 
 function calcMonthly(price, downPct, annualRate, months) {
     const principal = price * (1 - downPct / 100);
@@ -204,8 +205,8 @@ function PublicCarDetails() {
                 </div>
             </div>
 
-            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'flex-start' }}>
+            <div>
+                <div className="pub-details-layout">
 
                     {/* LEFT COLUMN */}
                     <div>
@@ -321,7 +322,7 @@ function PublicCarDetails() {
                             <p style={{ color: '#6f6f6f', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Compare financing options from Tanzania's top banks</p>
 
                             {/* Controls */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                            <div className="pub-calc-controls">
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: '#525252' }}>
                                         Down Payment: {downPct}% (TZS {(car.price * downPct / 100).toLocaleString()})
@@ -355,7 +356,7 @@ function PublicCarDetails() {
                             </div>
 
                             {/* Summary */}
-                            <div style={{ background: '#f0f4ff', borderRadius: '6px', padding: '1rem', marginBottom: '1.5rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                            <div className="pub-calc-summary">
                                 <div>
                                     <div style={{ fontSize: '0.8125rem', color: '#525252' }}>Car Price</div>
                                     <div style={{ fontWeight: 700 }}>TZS {car.price?.toLocaleString()}</div>
@@ -372,7 +373,7 @@ function PublicCarDetails() {
 
                             {/* Bank Comparison */}
                             {loanComparison.length > 0 ? (
-                                <div style={{ overflowX: 'auto' }}>
+                                <div className="table-scroll">
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                                         <thead>
                                             <tr style={{ background: '#f4f4f4' }}>
@@ -418,7 +419,7 @@ function PublicCarDetails() {
                     </div>
 
                     {/* RIGHT COLUMN — Sticky Apply Card */}
-                    <div style={{ position: 'sticky', top: '80px' }}>
+                    <div className="pub-sticky-aside">
                         {/* Apply Card */}
                         <div style={{ background: 'white', borderRadius: '8px', padding: '1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', marginBottom: '1.5rem' }}>
                             <div style={{ fontSize: '1.875rem', fontWeight: 900, color: '#0f62fe', marginBottom: '0.25rem' }}>

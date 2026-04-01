@@ -1276,8 +1276,10 @@ function AdminDashboard() {
 
 
 function TopNav({ user, onLogout }) {
+    const [mobileOpen, setMobileOpen] = React.useState(false);
+
     return (
-        <nav className="top-nav">
+        <nav className="top-nav" style={{ position: 'relative' }}>
             <div className="nav-container">
                 <div className="logo">
                     <svg width="40" height="40" viewBox="0 0 80 80" style={{ marginRight: '10px' }}>
@@ -1296,9 +1298,8 @@ function TopNav({ user, onLogout }) {
                     AutoFinance Hub
                 </div>
                 <ul className="nav-links">
-                    <li><a href="/">Magari</a></li>
-                    <li><a href="/">Mikopo</a></li>
-                    <li><a href="/">Kuhusu Sisi</a></li>
+                    <li><a href="/cars">Browse</a></li>
+                    <li><a href="/how-it-works">How It Works</a></li>
                 </ul>
                 <div className="user-menu">
                     {user && (
@@ -1306,45 +1307,31 @@ function TopNav({ user, onLogout }) {
                             <div className="user-avatar">
                                 {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'U'}
                             </div>
-                            <span style={{ 
-                                marginRight: '1rem',
-                                color: 'white',
-                                fontWeight: '500'
-                            }}>
+                            <span style={{ marginRight: '1rem', color: 'white', fontWeight: '500' }}>
                                 {user.user_metadata?.full_name || user.email || 'User'}
                             </span>
-                            <button 
-                                onClick={onLogout}
-                                style={{
-                                    padding: '10px 24px',
-                                    backgroundColor: '#ffffff',
-                                    border: '2px solid rgba(255,255,255,0.9)',
-                                    borderRadius: '8px',
-                                    color: '#667eea',  // Purple text - HIGH CONTRAST
-                                    cursor: 'pointer',
-                                    fontWeight: '700',
-                                    fontSize: '14px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                    transition: 'all 0.2s ease',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f8f9ff';
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#ffffff';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                                }}
-                            >
-                                    LOGOUT 
-                            </button>
+                            <button onClick={onLogout} style={{
+                                padding: '10px 24px', backgroundColor: '#ffffff',
+                                border: '2px solid rgba(255,255,255,0.9)', borderRadius: '8px',
+                                color: '#667eea', cursor: 'pointer', fontWeight: '700', fontSize: '14px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'all 0.2s ease',
+                                textTransform: 'uppercase', letterSpacing: '0.5px'
+                            }}>LOGOUT</button>
                         </>
                     )}
                 </div>
+                {/* Hamburger — mobile only */}
+                <button className="top-nav-hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
+                    {mobileOpen ? '✕' : '☰'}
+                </button>
+            </div>
+            {/* Mobile menu */}
+            <div className={`top-nav-mobile-menu ${mobileOpen ? 'open' : ''}`}>
+                <a href="/cars" onClick={() => setMobileOpen(false)}>Browse Cars</a>
+                <a href="/how-it-works" onClick={() => setMobileOpen(false)}>How It Works</a>
+                {user && (
+                    <button onClick={() => { setMobileOpen(false); onLogout(); }}>Logout</button>
+                )}
             </div>
         </nav>
     );
@@ -1424,11 +1411,51 @@ function BuyerDashboard() {
         downPayment: 0,
         term: 36
     });
+    const [myApplications, setMyApplications] = useState([]);
+    const [appsLoading, setAppsLoading] = useState(false);
 
     // Fetch cars from database on mount
     useEffect(() => {
         fetchCarsFromDB();
     }, []);
+
+    // Fetch applications when switching to applications view
+    useEffect(() => {
+        if (view === 'applications') fetchMyApplications();
+    }, [view]);
+
+    const fetchMyApplications = async () => {
+        setAppsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: buyerData } = await supabase
+                .from('buyers')
+                .select('buyer_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!buyerData) return;
+
+            const { data, error } = await supabase
+                .from('loan_applications')
+                .select(`
+                    *,
+                    car:cars(car_id, make, model, year, images),
+                    bank:banks(bank_name)
+                `)
+                .eq('buyer_id', buyerData.buyer_id)
+                .order('submitted_at', { ascending: false });
+
+            if (error) throw error;
+            setMyApplications(data || []);
+        } catch (error) {
+            console.error('Error fetching applications:', error);
+        } finally {
+            setAppsLoading(false);
+        }
+    };
 
     const fetchCarsFromDB = async () => {
         setLoading(true);
@@ -1659,12 +1686,107 @@ function BuyerDashboard() {
                         )}
                     </>
                 )}
+                {view === 'applications' && (
+                    <>
+                        <div className="card-header">
+                            <h1 className="card-title">My Applications</h1>
+                            <p className="card-subtitle">Track your loan applications and inspection updates</p>
+                        </div>
+
+                        {appsLoading ? (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#667eea' }}>Loading...</div>
+                        ) : myApplications.length === 0 ? (
+                            <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+                                <p style={{ color: '#6c757d' }}>No applications yet. Browse cars and apply for financing!</p>
+                            </div>
+                        ) : (
+                            myApplications.map(app => {
+                                const inspStatus = app.inspection_status;
+                                const inspDate = app.inspection_scheduled_date
+                                    ? new Date(app.inspection_scheduled_date).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' })
+                                    : null;
+
+                                let inspectionBanner = null;
+                                if (inspStatus === 'scheduled' && inspDate) {
+                                    inspectionBanner = (
+                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span>🗓️</span>
+                                            <span style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</span>
+                                            {app.inspection_report?.inspector_name && (
+                                                <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+                                                    — Inspector: {app.inspection_report.inspector_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                } else if (inspStatus === 'passed') {
+                                    inspectionBanner = (
+                                        <div style={{ background: '#d9f5e8', border: '1px solid #10b981', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+                                            <span style={{ color: '#10b981', fontWeight: 600 }}>✅ Inspection passed</span>
+                                            {app.inspection_completed_date && (
+                                                <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+                                                    on {new Date(app.inspection_completed_date).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                } else if (inspStatus === 'failed') {
+                                    inspectionBanner = (
+                                        <div style={{ background: '#fde8e8', border: '1px solid #dc2626', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+                                            <span style={{ color: '#dc2626', fontWeight: 600 }}>❌ Inspection failed — bank will contact you</span>
+                                        </div>
+                                    );
+                                } else if (inspStatus === 'repairs_requested') {
+                                    inspectionBanner = (
+                                        <div style={{ background: '#fff7e0', border: '1px solid #d97706', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+                                            <span style={{ color: '#d97706', fontWeight: 600 }}>🔧 Seller has been asked to repair the vehicle before re-inspection</span>
+                                        </div>
+                                    );
+                                }
+
+                                const statusColors = {
+                                    submitted: { bg: '#e8f4fd', color: '#0f62fe' },
+                                    approved: { bg: '#d9f5e8', color: '#10b981' },
+                                    rejected: { bg: '#fde8e8', color: '#dc2626' },
+                                    disbursed: { bg: '#d9f5e8', color: '#047857' },
+                                    cancelled: { bg: '#f3f4f6', color: '#6b7280' },
+                                };
+                                const sc = statusColors[app.status] || { bg: '#f3f4f6', color: '#6b7280' };
+
+                                return (
+                                    <div key={app.application_id} className="card" style={{ marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                            <div>
+                                                <h3 style={{ margin: 0 }}>{app.car?.make} {app.car?.model} {app.car?.year}</h3>
+                                                <p style={{ margin: '0.25rem 0 0', color: '#6c757d', fontSize: '0.875rem' }}>
+                                                    {app.bank?.bank_name} · TZS {app.loan_amount?.toLocaleString()} · {app.loan_term_months} months
+                                                </p>
+                                                <p style={{ margin: '0.15rem 0 0', color: '#6c757d', fontSize: '0.8125rem' }}>
+                                                    Applied: {new Date(app.submitted_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <span style={{ background: sc.bg, color: sc.color, padding: '0.3rem 0.8rem', borderRadius: '20px', fontWeight: 600, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+                                                {app.status}
+                                            </span>
+                                        </div>
+                                        {inspectionBanner}
+                                        {app.status === 'rejected' && app.rejection_reason && (
+                                            <p style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.875rem' }}>
+                                                Reason: {app.rejection_reason}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </>
+                )}
             </div>
-			
-			
+
+
 
             {/* Car Details Modal - WITH IMAGES & GALLERY */}
-			
+
             {selectedCar && (
                 <div className="modal-overlay" onClick={() => setSelectedCar(null)}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
@@ -2521,181 +2643,523 @@ function DisbursementModal({ application, onClose, onSuccess }) {
     );
 }
 
+// ── Approve With Inspection Modal ──────────────────────────────────────────
+function ApproveWithInspectionModal({ application, onClose, onApproved }) {
+    const [requireInspection, setRequireInspection] = useState(
+        application.inspection_required !== false
+    );
+    const [inspectionDate, setInspectionDate] = useState('');
+    const [inspectionTime, setInspectionTime] = useState('09:00');
+    const [inspectorName, setInspectorName] = useState('');
+    const [processing, setProcessing] = useState(false);
+
+    const handleConfirm = async () => {
+        if (requireInspection && !inspectionDate) {
+            alert('Please set an inspection date.');
+            return;
+        }
+        setProcessing(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const scheduledDateTime = requireInspection && inspectionDate
+                ? new Date(`${inspectionDate}T${inspectionTime}`).toISOString()
+                : null;
+
+            const updates = {
+                status: 'approved',
+                approved_at: new Date().toISOString(),
+                inspection_required: requireInspection,
+                inspection_scheduled_date: scheduledDateTime,
+                inspection_status: requireInspection ? 'scheduled' : 'not_required',
+                inspection_report: requireInspection && inspectorName
+                    ? { inspector_name: inspectorName }
+                    : null
+            };
+
+            const { error } = await supabase
+                .from('loan_applications')
+                .update(updates)
+                .eq('application_id', application.application_id);
+            if (error) throw error;
+
+            // Auto-reserve the car
+            if (application.car_id) {
+                await supabase.from('cars').update({ status: 'reserved' }).eq('car_id', application.car_id);
+            }
+
+            alert(requireInspection
+                ? `✅ Approved! Inspection scheduled for ${new Date(scheduledDateTime).toLocaleDateString()}.`
+                : '✅ Application approved!'
+            );
+            onApproved();
+            onClose();
+        } catch (error) {
+            alert('❌ Error: ' + error.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">Approve Application</h2>
+                    <button className="modal-close" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    <div className="card" style={{ background: '#f0f4ff', marginBottom: '1.5rem' }}>
+                        <strong>{application.car_make} {application.car_model} {application.car_year}</strong>
+                        <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.25rem' }}>
+                            TZS {parseFloat(application.loan_amount || 0).toLocaleString()} · {application.loan_term_months} months
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
+                            <input
+                                type="checkbox"
+                                checked={requireInspection}
+                                onChange={e => setRequireInspection(e.target.checked)}
+                                style={{ width: '18px', height: '18px' }}
+                            />
+                            Require Vehicle Inspection
+                        </label>
+                        <p style={{ fontSize: '0.8125rem', color: '#6f6f6f', marginTop: '0.375rem', marginLeft: '1.75rem' }}>
+                            Inspector will visit the seller's location to verify vehicle condition.
+                        </p>
+                    </div>
+
+                    {requireInspection && (
+                        <>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>Inspection Date *</label>
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={inspectionDate}
+                                        onChange={e => setInspectionDate(e.target.value)}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>Time</label>
+                                    <input
+                                        type="time"
+                                        className="form-input"
+                                        value={inspectionTime}
+                                        onChange={e => setInspectionTime(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Inspector Name</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={inspectorName}
+                                    onChange={e => setInspectorName(e.target.value)}
+                                    placeholder="Name of inspector or agency"
+                                />
+                            </div>
+                        </>
+                    )}
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-outline" onClick={onClose} disabled={processing}>Cancel</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleConfirm}
+                        disabled={processing}
+                        style={{ background: 'var(--success)' }}
+                    >
+                        {processing ? 'Processing...' : '✓ Confirm Approval'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Inspection Report Modal ─────────────────────────────────────────────────
+function InspectionReportModal({ application, onClose, onSaved }) {
+    const [report, setReport] = useState({
+        engine: 'good',
+        body: 'good',
+        interior: 'good',
+        tires: 'good',
+        electronics_working: true,
+        test_drive_completed: true,
+        overall_result: 'pass',
+        notes: '',
+        inspector_name: application.inspection_report?.inspector_name || '',
+        photos: []
+    });
+    const [uploading, setUploading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    const handlePhotoUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        setUploading(true);
+        try {
+            const urls = [];
+            for (const file of files) {
+                const fileName = `inspection_${Date.now()}_${Math.random().toString(36).slice(2)}.${file.name.split('.').pop()}`;
+                const { error } = await supabase.storage.from('car-images').upload(fileName, file);
+                if (error) throw error;
+                const { data: { publicUrl } } = supabase.storage.from('car-images').getPublicUrl(fileName);
+                urls.push(publicUrl);
+            }
+            setReport(r => ({ ...r, photos: [...r.photos, ...urls] }));
+        } catch (err) {
+            alert('Photo upload failed: ' + err.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleSubmit = async () => {
+        setSaving(true);
+        try {
+            const fullReport = { ...report, submitted_at: new Date().toISOString() };
+            const { error } = await supabase
+                .from('loan_applications')
+                .update({
+                    inspection_report: fullReport,
+                    inspection_passed: report.overall_result === 'pass',
+                    inspection_completed_date: new Date().toISOString(),
+                    inspection_status: report.overall_result === 'pass' ? 'passed' : 'failed'
+                })
+                .eq('application_id', application.application_id);
+            if (error) throw error;
+            alert(`✅ Inspection report submitted. Result: ${report.overall_result.toUpperCase()}`);
+            onSaved();
+            onClose();
+        } catch (err) {
+            alert('❌ Error: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const conditionSelect = (field) => (
+        <select
+            className="form-select"
+            value={report[field]}
+            onChange={e => setReport({ ...report, [field]: e.target.value })}
+        >
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+        </select>
+    );
+
+    const conditionColor = (val) => val === 'good' ? '#24a148' : val === 'fair' ? '#f59e0b' : '#dc3545';
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" style={{ maxWidth: '620px' }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">Inspection Report</h2>
+                    <button className="modal-close" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    <div className="card" style={{ background: '#f0f4ff', marginBottom: '1.5rem' }}>
+                        <strong>🔍 {application.car_make} {application.car_model} {application.car_year}</strong>
+                        {application.inspection_scheduled_date && (
+                            <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.25rem' }}>
+                                Scheduled: {new Date(application.inspection_scheduled_date).toLocaleString()}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="form-group">
+                        <label>Inspector Name</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={report.inspector_name}
+                            onChange={e => setReport({ ...report, inspector_name: e.target.value })}
+                            placeholder="Full name of inspector"
+                        />
+                    </div>
+
+                    <h4 style={{ marginBottom: '1rem', fontSize: '0.9375rem', fontWeight: 700 }}>Vehicle Condition Checklist</h4>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        {[
+                            { label: 'Engine Condition', field: 'engine' },
+                            { label: 'Body Condition', field: 'body' },
+                            { label: 'Interior Condition', field: 'interior' },
+                            { label: 'Tires Condition', field: 'tires' }
+                        ].map(({ label, field }) => (
+                            <div className="form-group" key={field} style={{ marginBottom: 0 }}>
+                                <label style={{ fontSize: '0.875rem' }}>{label}</label>
+                                {conditionSelect(field)}
+                                <div style={{ height: '3px', borderRadius: '2px', marginTop: '4px', background: conditionColor(report[field]) }} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        {[
+                            { label: 'Electronics Working?', field: 'electronics_working' },
+                            { label: 'Test Drive Completed?', field: 'test_drive_completed' }
+                        ].map(({ label, field }) => (
+                            <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#f9fafb', borderRadius: '6px', padding: '0.875rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={report[field]}
+                                    onChange={e => setReport({ ...report, [field]: e.target.checked })}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                />
+                                <label style={{ fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer' }}>{label}</label>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="form-group">
+                        <label>Inspector Notes</label>
+                        <textarea
+                            className="form-input"
+                            rows={3}
+                            value={report.notes}
+                            onChange={e => setReport({ ...report, notes: e.target.value })}
+                            placeholder="Describe any issues, observations, or recommendations..."
+                        />
+                    </div>
+
+                    {/* Photo upload */}
+                    <div className="form-group">
+                        <label>Inspection Photos (optional)</label>
+                        <label style={{
+                            display: 'inline-block', padding: '0.5rem 1rem', background: '#667eea',
+                            color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600
+                        }}>
+                            📷 Upload Photos {uploading && '(uploading...)'}
+                            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                        </label>
+                        {report.photos.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                                {report.photos.map((url, i) => (
+                                    <img key={i} src={url} alt={`Photo ${i + 1}`} style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Overall result */}
+                    <div style={{ padding: '1.25rem', background: '#f9fafb', borderRadius: '8px' }}>
+                        <label style={{ fontWeight: 700, fontSize: '1rem', display: 'block', marginBottom: '0.875rem' }}>Overall Inspection Result</label>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            {['pass', 'fail'].map(val => (
+                                <label key={val} style={{
+                                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    gap: '0.5rem', padding: '0.875rem', borderRadius: '6px', cursor: 'pointer',
+                                    border: `2px solid ${report.overall_result === val ? (val === 'pass' ? '#24a148' : '#dc3545') : '#e0e0e0'}`,
+                                    background: report.overall_result === val ? (val === 'pass' ? '#d1f4e0' : '#ffe0e0') : 'white',
+                                    fontWeight: 700, fontSize: '1rem'
+                                }}>
+                                    <input
+                                        type="radio"
+                                        name="overall_result"
+                                        value={val}
+                                        checked={report.overall_result === val}
+                                        onChange={() => setReport({ ...report, overall_result: val })}
+                                        style={{ display: 'none' }}
+                                    />
+                                    {val === 'pass' ? '✅ PASS' : '❌ FAIL'}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-outline" onClick={onClose} disabled={saving || uploading}>Cancel</button>
+                    <button className="btn btn-primary" onClick={handleSubmit} disabled={saving || uploading}>
+                        {saving ? 'Submitting...' : 'Submit Report'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // PostApprovalTracker Component
 function PostApprovalTracker({ application, onUpdate }) {
-    const [statuses, setStatuses] = useState({
-        inspection_status: application.inspection_status || 'pending',
-        gps_tracker_status: application.gps_tracker_status || 'pending',
-        logbook_status: application.logbook_status || 'pending'
-    });
+    const [inspectionStatus, setInspectionStatus] = useState(application.inspection_status || 'pending');
+    const [gpsInstalled, setGpsInstalled] = useState(application.gps_tracker_installed || false);
+    const [logbookTransferred, setLogbookTransferred] = useState(application.logbook_transferred_to_bank || false);
     const [updating, setUpdating] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
 
-    const updateStatus = async (field, value) => {
+    const update = async (fields) => {
         setUpdating(true);
         try {
             const { error } = await supabase
                 .from('loan_applications')
-                .update({ [field]: value })
+                .update(fields)
                 .eq('application_id', application.application_id);
-
             if (error) throw error;
-
-            setStatuses({ ...statuses, [field]: value });
-            alert(`✅ ${field.replace(/_/g, ' ')} updated!`);
             if (onUpdate) onUpdate();
-        } catch (error) {
-            console.error('Error updating status:', error);
-            alert('❌ Error: ' + error.message);
+        } catch (err) {
+            alert('❌ Error: ' + err.message);
         } finally {
             setUpdating(false);
         }
     };
 
-    const allComplete = 
-        statuses.inspection_status === 'passed' &&
-        statuses.gps_tracker_status === 'installed' &&
-        statuses.logbook_status === 'collected';
+    const handleGpsToggle = async () => {
+        const newVal = !gpsInstalled;
+        setGpsInstalled(newVal);
+        await update({ gps_tracker_installed: newVal, gps_tracker_installed_date: newVal ? new Date().toISOString() : null });
+    };
+
+    const handleLogbookToggle = async () => {
+        const newVal = !logbookTransferred;
+        setLogbookTransferred(newVal);
+        await update({ logbook_transferred_to_bank: newVal, logbook_transfer_date: newVal ? new Date().toISOString() : null });
+    };
+
+    const handleInspectionFail = async (action) => {
+        if (action === 'reject') {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+            await update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: reason });
+            alert('Application rejected.');
+        } else {
+            await update({ inspection_status: 'repairs_requested', inspection_notes: 'Repairs requested after failed inspection.' });
+            setInspectionStatus('repairs_requested');
+            alert('Repair request sent to seller.');
+        }
+        if (onUpdate) onUpdate();
+    };
+
+    const report = application.inspection_report;
+    const inspectionRequired = application.inspection_required !== false;
+    const scheduledDate = application.inspection_scheduled_date;
+    const allComplete = (inspectionStatus === 'passed' || !inspectionRequired) && gpsInstalled && logbookTransferred;
 
     return (
         <div className="card" style={{ marginTop: '1.5rem' }}>
             <h4 style={{ marginBottom: '1rem' }}>📋 Post-Approval Checklist</h4>
-            
+
             {allComplete && (
-                <div style={{
-                    background: '#d1fae5',
-                    border: '1px solid #10b981',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    marginBottom: '1rem',
-                    color: '#065f46',
-                    fontWeight: '600'
-                }}>
-                    ✅ All steps complete! You can now disburse funds to the seller.
+                <div style={{ background: '#d1f4e0', border: '1px solid #24a148', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: '#0f6938', fontWeight: 600 }}>
+                    ✅ All steps complete — you can now disburse funds to the seller.
                 </div>
             )}
 
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            {/* ── INSPECTION ── */}
+            <div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.625rem' }}>
                     <h5 style={{ margin: 0, fontSize: '15px' }}>🔍 Vehicle Inspection</h5>
                     <span className={`badge badge-${
-                        statuses.inspection_status === 'passed' ? 'success' :
-                        statuses.inspection_status === 'failed' ? 'danger' : 'warning'
-                    }`}>
-                        {statuses.inspection_status}
-                    </span>
+                        inspectionStatus === 'passed' ? 'success' :
+                        inspectionStatus === 'failed' ? 'danger' :
+                        inspectionStatus === 'not_required' ? 'info' : 'warning'
+                    }`}>{inspectionStatus?.replace(/_/g, ' ')}</span>
                 </div>
-                <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '1rem' }}>
-                    Physical inspection of vehicle condition
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('inspection_status', 'scheduled')}
-                        disabled={updating}
-                    >
-                        📅 Scheduled
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('inspection_status', 'in_progress')}
-                        disabled={updating}
-                    >
-                        ⏳ In Progress
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('inspection_status', 'passed')}
-                        disabled={updating}
-                        style={{ color: statuses.inspection_status === 'passed' ? '#10b981' : '#6c757d' }}
-                    >
-                        ✅ Passed
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('inspection_status', 'failed')}
-                        disabled={updating}
-                        style={{ color: statuses.inspection_status === 'failed' ? '#dc2626' : '#6c757d' }}
-                    >
-                        ❌ Failed
-                    </button>
+
+                {!inspectionRequired ? (
+                    <p style={{ fontSize: '13px', color: '#6c757d' }}>Inspection not required for this application.</p>
+                ) : (
+                    <>
+                        {scheduledDate && (
+                            <div style={{ fontSize: '13px', marginBottom: '0.75rem', color: '#525252' }}>
+                                📅 <strong>Scheduled:</strong> {new Date(scheduledDate).toLocaleString()}
+                                {report?.inspector_name && <> · <strong>Inspector:</strong> {report.inspector_name}</>}
+                            </div>
+                        )}
+
+                        {/* Report submitted */}
+                        {report?.submitted_at && (
+                            <div style={{ background: report.overall_result === 'pass' ? '#d1f4e0' : '#ffe0e0', borderRadius: '6px', padding: '0.875rem', marginBottom: '0.875rem', fontSize: '13px' }}>
+                                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+                                    {report.overall_result === 'pass' ? '✅ PASSED' : '❌ FAILED'} — {new Date(report.submitted_at).toLocaleDateString()}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 1rem' }}>
+                                    {['engine','body','interior','tires'].map(k => (
+                                        <span key={k}><strong>{k}:</strong> {report[k]}</span>
+                                    ))}
+                                    <span><strong>Electronics:</strong> {report.electronics_working ? 'Yes' : 'No'}</span>
+                                    <span><strong>Test drive:</strong> {report.test_drive_completed ? 'Yes' : 'No'}</span>
+                                </div>
+                                {report.notes && <p style={{ marginTop: '0.5rem', fontStyle: 'italic' }}>{report.notes}</p>}
+                                {report.photos?.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                                        {report.photos.map((url, i) => (
+                                            <a href={url} target="_blank" rel="noreferrer" key={i}>
+                                                <img src={url} alt={`Photo ${i+1}`} style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '3px' }} />
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {!report?.submitted_at && (
+                                <button className="btn btn-sm btn-outline" onClick={() => setShowReportModal(true)} disabled={updating}>
+                                    📝 Submit Inspection Report
+                                </button>
+                            )}
+                            {inspectionStatus === 'failed' && (
+                                <>
+                                    <button className="btn btn-sm btn-outline" onClick={() => handleInspectionFail('repairs')} disabled={updating} style={{ color: '#f59e0b', borderColor: '#f59e0b' }}>
+                                        🔧 Request Repairs
+                                    </button>
+                                    <button className="btn btn-sm btn-outline" onClick={() => handleInspectionFail('reject')} disabled={updating} style={{ color: '#dc3545', borderColor: '#dc3545' }}>
+                                        ✗ Reject Application
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ── GPS TRACKER ── */}
+            <div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h5 style={{ margin: '0 0 0.25rem', fontSize: '15px' }}>📍 GPS Tracker</h5>
+                        <p style={{ fontSize: '13px', color: '#6c757d', margin: 0 }}>Tracking device installation</p>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={gpsInstalled} onChange={handleGpsToggle} disabled={updating} style={{ width: '18px', height: '18px' }} />
+                        <span className={`badge badge-${gpsInstalled ? 'success' : 'warning'}`}>
+                            {gpsInstalled ? 'Installed' : 'Pending'}
+                        </span>
+                    </label>
                 </div>
             </div>
 
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <h5 style={{ margin: 0, fontSize: '15px' }}>📍 GPS Tracker</h5>
-                    <span className={`badge badge-${
-                        statuses.gps_tracker_status === 'installed' ? 'success' : 'warning'
-                    }`}>
-                        {statuses.gps_tracker_status}
-                    </span>
-                </div>
-                <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '1rem' }}>
-                    GPS tracking device installed
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('gps_tracker_status', 'pending')}
-                        disabled={updating}
-                    >
-                        ⏳ Pending
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('gps_tracker_status', 'ordered')}
-                        disabled={updating}
-                    >
-                        📦 Ordered
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('gps_tracker_status', 'installed')}
-                        disabled={updating}
-                        style={{ color: statuses.gps_tracker_status === 'installed' ? '#10b981' : '#6c757d' }}
-                    >
-                        ✅ Installed
-                    </button>
-                </div>
-            </div>
-
+            {/* ── LOGBOOK ── */}
             <div style={{ padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <h5 style={{ margin: 0, fontSize: '15px' }}>📖 Logbook / Title</h5>
-                    <span className={`badge badge-${
-                        statuses.logbook_status === 'collected' ? 'success' : 'warning'
-                    }`}>
-                        {statuses.logbook_status}
-                    </span>
-                </div>
-                <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '1rem' }}>
-                    Original vehicle documents
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('logbook_status', 'pending')}
-                        disabled={updating}
-                    >
-                        ⏳ Pending
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('logbook_status', 'requested')}
-                        disabled={updating}
-                    >
-                        📨 Requested
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline"
-                        onClick={() => updateStatus('logbook_status', 'collected')}
-                        disabled={updating}
-                        style={{ color: statuses.logbook_status === 'collected' ? '#10b981' : '#6c757d' }}
-                    >
-                        ✅ Collected
-                    </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h5 style={{ margin: '0 0 0.25rem', fontSize: '15px' }}>📖 Logbook / Title Transfer</h5>
+                        <p style={{ fontSize: '13px', color: '#6c757d', margin: 0 }}>Original vehicle documents held by bank</p>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={logbookTransferred} onChange={handleLogbookToggle} disabled={updating} style={{ width: '18px', height: '18px' }} />
+                        <span className={`badge badge-${logbookTransferred ? 'success' : 'warning'}`}>
+                            {logbookTransferred ? 'Transferred' : 'Pending'}
+                        </span>
+                    </label>
                 </div>
             </div>
+
+            {showReportModal && (
+                <InspectionReportModal
+                    application={application}
+                    onClose={() => setShowReportModal(false)}
+                    onSaved={() => { setInspectionStatus('passed'); setShowReportModal(false); if (onUpdate) onUpdate(); }}
+                />
+            )}
         </div>
     );
 }
@@ -2883,6 +3347,7 @@ function BankDashboard() {
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showApproveModal, setShowApproveModal] = useState(false);
 
     // Fetch applications on mount
     useEffect(() => {
@@ -3309,14 +3774,14 @@ function BankDashboard() {
                             </button>
                             {selectedApplication.status === 'submitted' && (
                                 <>
-                                    <button 
+                                    <button
                                         className="btn btn-primary"
-                                        onClick={() => handleApprove(selectedApplication.application_id)}
+                                        onClick={() => setShowApproveModal(true)}
                                         style={{ background: 'var(--success)' }}
                                     >
                                         ✓ Approve
                                     </button>
-                                    <button 
+                                    <button
                                         className="btn btn-primary"
                                         onClick={() => handleReject(selectedApplication.application_id)}
                                         style={{ background: 'var(--danger)' }}
@@ -3328,6 +3793,19 @@ function BankDashboard() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Approve With Inspection Modal */}
+            {showApproveModal && selectedApplication && (
+                <ApproveWithInspectionModal
+                    application={selectedApplication}
+                    onClose={() => setShowApproveModal(false)}
+                    onApproved={() => {
+                        setShowApproveModal(false);
+                        setSelectedApplication(null);
+                        fetchApplications();
+                    }}
+                />
             )}
         </>
     );
@@ -4156,6 +4634,7 @@ function SellerDashboard() {
     const [editingCar, setEditingCar] = useState(null);
     const [appFilterCar, setAppFilterCar] = useState('all');
     const [appFilterStatus, setAppFilterStatus] = useState('all');
+    const [upcomingInspections, setUpcomingInspections] = useState([]);
 
     useEffect(() => {
         fetchSellerData();
@@ -4209,6 +4688,26 @@ function SellerDashboard() {
             if (appsError) throw appsError;
 
             setApplications(appsData || []);
+
+            // Fetch upcoming inspections (approved apps with scheduled inspection)
+            const { data: inspData } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    inspection_scheduled_date,
+                    inspection_status,
+                    inspection_report,
+                    car:cars!car_id(make, model, year),
+                    buyer:buyers!buyer_id(
+                        user:users!buyers_user_id_fkey(first_name, last_name)
+                    )
+                `)
+                .eq('seller_id', sellerData.seller_id)
+                .eq('inspection_status', 'scheduled')
+                .not('inspection_scheduled_date', 'is', null)
+                .order('inspection_scheduled_date', { ascending: true });
+
+            setUpcomingInspections(inspData || []);
 
             // Calculate stats
             const totalCars = carsData?.length || 0;
@@ -4396,6 +4895,35 @@ function SellerDashboard() {
                                                 ))}
                                             </tbody>
                                         </table>
+                                    </div>
+                                )}
+
+                                {/* Upcoming Inspections */}
+                                {upcomingInspections.length > 0 && (
+                                    <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #0f62fe' }}>
+                                        <h3 className="card-title" style={{ marginBottom: '1rem' }}>🗓️ Upcoming Inspections</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {upcomingInspections.map(insp => {
+                                                const dt = insp.inspection_scheduled_date
+                                                    ? new Date(insp.inspection_scheduled_date).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' })
+                                                    : 'TBD';
+                                                const inspector = insp.inspection_report?.inspector_name;
+                                                return (
+                                                    <div key={insp.application_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#f0f6ff', borderRadius: '8px', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        <div>
+                                                            <strong>{insp.car?.make} {insp.car?.model} {insp.car?.year}</strong>
+                                                            <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.15rem' }}>
+                                                                Buyer: {insp.buyer?.user?.first_name} {insp.buyer?.user?.last_name}
+                                                                {inspector && <span> · Inspector: {inspector}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                            {dt}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 )}
 

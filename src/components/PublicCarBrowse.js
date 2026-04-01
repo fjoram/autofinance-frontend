@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import PublicNav from './PublicNav';
+import './Public.css';
 
 function calcMonthlyEstimate(price) {
     // Quick estimate: 20% down, 15% annual rate, 48 months
@@ -37,6 +38,7 @@ function PublicCarBrowse() {
         transmission: ''
     });
     const [sort, setSort] = useState('newest');
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
         fetchCars();
@@ -125,11 +127,14 @@ function PublicCarBrowse() {
                 </div>
             </div>
 
-            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+            <div className="pub-browse-layout">
 
                 {/* FILTER PANEL */}
-                <aside style={{ width: '260px', flexShrink: 0 }}>
-                    <div style={{ background: 'white', borderRadius: '8px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', position: 'sticky', top: '80px' }}>
+                <aside className="pub-filter-sidebar">
+                    <button className="pub-filter-toggle" onClick={() => setFiltersOpen(!filtersOpen)}>
+                        {filtersOpen ? '▲ Hide Filters' : '▼ Show Filters'}
+                    </button>
+                    <div className={`pub-filter-body${filtersOpen ? '' : ' collapsed'}`} style={{ background: 'white', borderRadius: '8px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', position: 'sticky', top: '80px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                             <span style={{ fontWeight: 700, fontSize: '1rem' }}>Filters</span>
                             {hasFilters && (
