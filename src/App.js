@@ -3401,7 +3401,13 @@ function BankDashboard() {
                         bank_account_name,
                         bank_branch,
                         mobile_money_provider,
-                        mobile_money_number
+                        mobile_money_number,
+                        user:users!sellers_user_id_fkey(
+                            first_name,
+                            last_name,
+                            email,
+                            phone
+                        )
                     ),
                     car:cars!car_id(
                         car_id,
@@ -3674,14 +3680,36 @@ function BankDashboard() {
                                             <td style={{ padding: '0.5rem' }}>{selectedApplication.seller?.business_name}</td>
                                         </tr>
                                         <tr>
-                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Location:</td>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Contact Person:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                {selectedApplication.seller?.city}, {selectedApplication.seller?.region}
+                                                {selectedApplication.seller?.user?.first_name} {selectedApplication.seller?.user?.last_name}
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Full Address:</td>
-                                            <td style={{ padding: '0.5rem' }}>{selectedApplication.seller?.address}</td>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Email:</td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <a href={`mailto:${selectedApplication.seller?.user?.email}`} style={{ color: '#0f62fe' }}>
+                                                    {selectedApplication.seller?.user?.email || '—'}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Phone:</td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                <a href={`tel:${selectedApplication.seller?.user?.phone}`} style={{ color: '#0f62fe' }}>
+                                                    {selectedApplication.seller?.user?.phone || '—'}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Location:</td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                {[selectedApplication.seller?.city, selectedApplication.seller?.region].filter(Boolean).join(', ') || '—'}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Address:</td>
+                                            <td style={{ padding: '0.5rem' }}>{selectedApplication.seller?.address || '—'}</td>
                                         </tr>
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Verification:</td>
@@ -3693,6 +3721,49 @@ function BankDashboard() {
                                                 )}
                                             </td>
                                         </tr>
+                                        {/* Payment details for disbursement */}
+                                        {selectedApplication.seller?.payment_method && (
+                                            <>
+                                                <tr>
+                                                    <td colSpan={2} style={{ padding: '0.5rem 0.5rem 0.25rem', fontWeight: 'bold', borderTop: '1px solid #e9ecef', paddingTop: '0.75rem' }}>
+                                                        Payment Details (for disbursement)
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Method:</td>
+                                                    <td style={{ padding: '0.5rem', textTransform: 'capitalize' }}>
+                                                        {selectedApplication.seller.payment_method === 'bank_transfer' ? '🏦 Bank Transfer' : '📱 Mobile Money'}
+                                                    </td>
+                                                </tr>
+                                                {selectedApplication.seller.payment_method === 'bank_transfer' ? (
+                                                    <>
+                                                        <tr>
+                                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Bank:</td>
+                                                            <td style={{ padding: '0.5rem' }}>{selectedApplication.seller.bank_name} {selectedApplication.seller.bank_branch ? `— ${selectedApplication.seller.bank_branch}` : ''}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Account Name:</td>
+                                                            <td style={{ padding: '0.5rem' }}>{selectedApplication.seller.bank_account_name}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Account Number:</td>
+                                                            <td style={{ padding: '0.5rem' }}><strong>{selectedApplication.seller.bank_account_number}</strong></td>
+                                                        </tr>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <tr>
+                                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Provider:</td>
+                                                            <td style={{ padding: '0.5rem' }}>{selectedApplication.seller.mobile_money_provider}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Number:</td>
+                                                            <td style={{ padding: '0.5rem' }}><strong>{selectedApplication.seller.mobile_money_number}</strong></td>
+                                                        </tr>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
