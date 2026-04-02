@@ -59,8 +59,18 @@ function PublicNav() {
             }}>
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                    <div style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0f62fe', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        🚗 AutoFinance
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <rect width="34" height="34" rx="7" fill="#0f62fe"/>
+                            <path d="M6.5 22.5l3.8-8.5h13.4l3.8 8.5H6.5z" fill="white"/>
+                            <rect x="5.5" y="22.5" width="23" height="3" rx="1.5" fill="white"/>
+                            <circle cx="11" cy="25.5" r="2.8" fill="#0f62fe" stroke="white" strokeWidth="1.5"/>
+                            <circle cx="23" cy="25.5" r="2.8" fill="#0f62fe" stroke="white" strokeWidth="1.5"/>
+                            <path d="M12.5 18.5l1.8-4h7.4l1.8 4H12.5z" fill="#0043ce"/>
+                            <rect x="7" y="10" width="6" height="1.5" rx="0.75" fill="#f0a500"/>
+                            <rect x="21" y="10" width="6" height="1.5" rx="0.75" fill="#1eb53a"/>
+                        </svg>
+                        <span style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0f62fe', letterSpacing: '-0.02em' }}>AutoFinance</span>
                     </div>
                 </Link>
 
