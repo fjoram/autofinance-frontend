@@ -1345,16 +1345,14 @@ function TopNav({ user, onLogout }) {
 function Sidebar({ userType, activeView, onNavigate }) {
     const menus = {
         buyer: [
-            { id: 'browse', label: 'Tafuta Magari', icon: '🚗' },
-            { id: 'applications', label: 'Maombi Yangu', icon: '📋' },
-            { id: 'saved', label: 'Magari Nipendeayo', icon: '❤️' }
+            { id: 'browse', label: 'Browse Cars', icon: '🚗' },
+            { id: 'applications', label: 'My Applications', icon: '📋' }
         ],
         seller: [
-            { id: 'dashboard', label: 'Dashibodi', icon: '📊' },
-            { id: 'listings', label: 'Magari Yangu', icon: '🚗' },
-            { id: 'applications', label: 'Maombi', icon: '📋' },
-            { id: 'payment-settings', label: 'Mipangilio ya Malipo', icon: '💳' },
-            { id: 'add-car', label: 'Ongeza Gari', icon: '➕' }
+            { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+            { id: 'cars', label: 'My Cars', icon: '🚗' },
+            { id: 'applications', label: 'Applications', icon: '📋' },
+            { id: 'payment-settings', label: 'Payment Settings', icon: '💳' }
         ],
         bank: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -5094,6 +5092,84 @@ function SellerDashboard() {
                                     )}
                                 </div>
                             </>
+                        )}
+                    </>
+                )}
+
+                {view === 'cars' && (
+                    <>
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h1 className="card-title">My Cars</h1>
+                                <p className="card-subtitle">{cars.length} listing{cars.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            <button className="btn btn-primary" onClick={handleAddCar}>+ Add New Car</button>
+                        </div>
+
+                        {cars.length === 0 ? (
+                            <div className="card" style={{ textAlign: 'center', padding: '3rem', color: '#6c757d' }}>
+                                <p>No cars listed yet.</p>
+                                <button className="btn btn-primary" onClick={handleAddCar} style={{ marginTop: '1rem' }}>
+                                    + Add Your First Car
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="cars-grid">
+                                {cars.map(car => (
+                                    <div key={car.car_id} className="car-card">
+                                        <div
+                                            className="car-image"
+                                            style={{
+                                                backgroundImage: car.images && car.images.length > 0 ? `url(${car.images[0]})` : 'none',
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            {(!car.images || car.images.length === 0) && '🚗'}
+                                            <span className="car-badge" style={{
+                                                background: car.status === 'available' ? '#24a148' :
+                                                            car.status === 'reserved' ? '#f59e0b' :
+                                                            car.status === 'sold' ? '#dc3545' :
+                                                            car.status === 'draft' ? '#6c757d' : '#667eea'
+                                            }}>{car.status}</span>
+                                            {car.is_featured && (
+                                                <span style={{
+                                                    position: 'absolute', top: '8px', left: '8px',
+                                                    background: '#f59e0b', color: 'white',
+                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600'
+                                                }}>Featured</span>
+                                            )}
+                                        </div>
+                                        <div className="car-details">
+                                            <h3 className="car-title">{car.year} {car.make} {car.model}</h3>
+                                            <div className="car-price">TZS {car.price?.toLocaleString()}</div>
+                                            <div className="car-specs">
+                                                <span className="spec-item">{car.location_city}</span>
+                                                <span className="spec-item">{car.views_count || 0} views</span>
+                                            </div>
+                                            <div style={{ marginTop: '0.75rem' }}>
+                                                <label style={{ fontSize: '12px', color: '#6c757d', display: 'block', marginBottom: '4px' }}>Status</label>
+                                                <select
+                                                    value={car.status}
+                                                    onChange={(e) => handleStatusChange(car.car_id, e.target.value)}
+                                                    style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid #dee2e6', fontSize: '13px' }}
+                                                >
+                                                    <option value="available">Available</option>
+                                                    <option value="reserved">Reserved</option>
+                                                    <option value="sold">Sold</option>
+                                                    <option value="draft">Draft</option>
+                                                    <option value="inactive">Inactive</option>
+                                                </select>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                                <button className="btn btn-sm btn-outline" onClick={() => handleEditCar(car)}>Edit</button>
+                                                <button className="btn btn-sm btn-outline" onClick={() => handleDeleteCar(car.car_id)} style={{ color: '#dc3545' }}>Delete</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </>
                 )}
