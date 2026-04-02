@@ -59,11 +59,13 @@ function PublicNav() {
             }}>
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                    <img
-                        src="/logo.png"
-                        alt="AutoFinance - Car Financing Connector"
-                        style={{ height: '52px', width: 'auto', display: 'block' }}
-                    />
+                    <div style={{ height: '48px', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+                        <img
+                            src="/logo.png"
+                            alt="AutoFinance"
+                            style={{ height: '160px', width: 'auto', marginTop: '-56px', display: 'block' }}
+                        />
+                    </div>
                 </Link>
 
                 {/* Desktop Center Links */}
