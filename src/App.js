@@ -433,7 +433,7 @@ function AdminSidebar({ activeView, onNavigate }) {
 }
 
 // AdminOverview Component - Dashboard Homepage
-function AdminOverview() {
+function AdminOverview({ onNavigate }) {
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalBuyers: 0,
@@ -490,9 +490,21 @@ function AdminOverview() {
                 .select('*', { count: 'exact', head: true })
                 .eq('verification_status', 'pending');
 
-            // Calculate revenue (this will be updated when commission system is added)
-            const totalRevenue = 0; // Placeholder
-            const monthlyRevenue = 0; // Placeholder
+            // Calculate revenue from disbursed applications
+            const { data: disbursedApps } = await supabase
+                .from('loan_applications')
+                .select('platform_fee_amount, loan_amount, disbursement_date')
+                .eq('status', 'disbursed');
+
+            const now = new Date();
+            const thisMonth = now.getMonth();
+            const thisYear = now.getFullYear();
+
+            const totalRevenue = disbursedApps?.reduce((s, a) => s + parseFloat(a.platform_fee_amount || parseFloat(a.loan_amount || 0) * PLATFORM_FEE_RATE), 0) || 0;
+            const monthlyRevenue = disbursedApps?.filter(a => {
+                const d = new Date(a.disbursement_date);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            }).reduce((s, a) => s + parseFloat(a.platform_fee_amount || parseFloat(a.loan_amount || 0) * PLATFORM_FEE_RATE), 0) || 0;
 
             setStats({
                 totalUsers: (buyersCount || 0) + (sellersCount || 0) + (banksCount || 0),
@@ -590,6 +602,18 @@ function AdminOverview() {
                     </div>
                     <div className="stat-change">Sellers awaiting approval</div>
                 </div>
+
+                <div className="stat-card">
+                    <div className="stat-label">Platform Revenue</div>
+                    <div className="stat-value">{(stats.totalRevenue / 1000).toFixed(0)}K</div>
+                    <div className="stat-change">TZS earned</div>
+                </div>
+
+                <div className="stat-card">
+                    <div className="stat-label">This Month</div>
+                    <div className="stat-value">{(stats.monthlyRevenue / 1000).toFixed(0)}K</div>
+                    <div className="stat-change">TZS revenue</div>
+                </div>
             </div>
 
             {/* Alerts Section */}
@@ -607,7 +631,7 @@ function AdminOverview() {
                     </p>
                     <button
                         className="btn btn-primary"
-                        onClick={() => window.location.hash = '#seller-verification'}
+                        onClick={() => onNavigate('seller-verification')}
                         style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
                     >
                         Review Sellers →
@@ -1172,6 +1196,679 @@ function SellerVerification() {
 }
 
 
+// Admin: User Management View
+function AdminUsersView() {
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const [{ data: buyers }, { data: sellers }, { data: banks }] = await Promise.all([
+                supabase.from('buyers').select('buyer_id, user:users!buyers_user_id_fkey(first_name, last_name, email, phone, created_at)'),
+                supabase.from('sellers').select('seller_id, business_name, verification_status, user:users!sellers_user_id_fkey(first_name, last_name, email, phone, created_at)'),
+                supabase.from('banks').select('bank_id, bank_name, user:users!banks_user_id_fkey(first_name, last_name, email, phone, created_at)')
+            ]);
+
+            const combined = [
+                ...(buyers || []).map(b => ({ ...b, type: 'buyer', name: `${b.user?.first_name || ''} ${b.user?.last_name || ''}`.trim(), email: b.user?.email, phone: b.user?.phone, created_at: b.user?.created_at })),
+                ...(sellers || []).map(s => ({ ...s, type: 'seller', name: s.business_name || `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(), email: s.user?.email, phone: s.user?.phone, created_at: s.user?.created_at })),
+                ...(banks || []).map(bk => ({ ...bk, type: 'bank', name: bk.bank_name || `${bk.user?.first_name || ''} ${bk.user?.last_name || ''}`.trim(), email: bk.user?.email, phone: bk.user?.phone, created_at: bk.user?.created_at }))
+            ];
+            combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            setUsers(combined);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filtered = filter === 'all' ? users : users.filter(u => u.type === filter);
+
+    const badgeClass = (type) => type === 'buyer' ? 'badge-success' : type === 'seller' ? 'badge-warning' : 'badge-danger';
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">User Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>View all registered users across the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {['all', 'buyer', 'seller', 'bank'].map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}{f === 'all' ? 's' : 's'}
+                            {f !== 'all' && ` (${users.filter(u => u.type === f).length})`}
+                            {f === 'all' && ` (${users.length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading users...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Type</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="5" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No users found</td></tr>
+                                ) : filtered.map((u, i) => (
+                                    <tr key={i}>
+                                        <td>{u.name || '—'}</td>
+                                        <td>{u.email || '—'}</td>
+                                        <td>{u.phone || '—'}</td>
+                                        <td><span className={`badge ${badgeClass(u.type)}`}>{u.type}</span></td>
+                                        <td>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Car Listings View
+function AdminCarsView() {
+    const [cars, setCars] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchCars();
+    }, []);
+
+    const fetchCars = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('cars')
+                .select('car_id, make, model, year, price, status, location, listed_at, created_at, seller:sellers(business_name)')
+                .order('created_at', { ascending: false });
+            setCars(data || []);
+        } catch (error) {
+            console.error('Error fetching cars:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const statusBadge = (status) => {
+        const map = { available: 'badge-success', reserved: 'badge-warning', sold: 'badge-danger', draft: '' };
+        return map[status] || '';
+    };
+
+    const filtered = filter === 'all' ? cars : cars.filter(c => c.status === filter);
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Car Listings Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Oversight of all car listings on the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {['all', 'available', 'reserved', 'sold', 'draft'].map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                            {f === 'all' ? ` (${cars.length})` : ` (${cars.filter(c => c.status === f).length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading cars...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Price (TZS)</th>
+                                    <th>Status</th>
+                                    <th>Location</th>
+                                    <th>Seller</th>
+                                    <th>Listed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="6" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No listings found</td></tr>
+                                ) : filtered.map(car => (
+                                    <tr key={car.car_id}>
+                                        <td>{car.year} {car.make} {car.model}</td>
+                                        <td>{(car.price || 0).toLocaleString()}</td>
+                                        <td><span className={`badge ${statusBadge(car.status)}`}>{car.status || 'unknown'}</span></td>
+                                        <td>{car.location || '—'}</td>
+                                        <td>{car.seller?.business_name || '—'}</td>
+                                        <td>{car.listed_at ? new Date(car.listed_at).toLocaleDateString('en-GB') : car.created_at ? new Date(car.created_at).toLocaleDateString('en-GB') : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Applications View
+function AdminApplicationsView() {
+    const [applications, setApplications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    const fetchApplications = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    submitted_at,
+                    created_at,
+                    status,
+                    loan_amount,
+                    buyer:buyers!buyer_id(user:users!buyers_user_id_fkey(first_name, last_name)),
+                    car:cars!car_id(make, model, year),
+                    bank:banks!bank_id(bank_name),
+                    seller:sellers!seller_id(business_name)
+                `)
+                .order('created_at', { ascending: false });
+            setApplications(data || []);
+        } catch (error) {
+            console.error('Error fetching applications:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const statusBadge = (status) => {
+        const map = { submitted: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger', disbursed: 'badge-success' };
+        return map[status] || 'badge-warning';
+    };
+
+    const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
+    const statuses = ['all', 'submitted', 'approved', 'rejected', 'disbursed'];
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Application Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>All loan applications across the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {statuses.map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                            {f === 'all' ? ` (${applications.length})` : ` (${applications.filter(a => a.status === f).length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading applications...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Buyer</th>
+                                    <th>Car</th>
+                                    <th>Bank</th>
+                                    <th>Seller</th>
+                                    <th>Loan Amount (TZS)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No applications found</td></tr>
+                                ) : filtered.map(app => (
+                                    <tr key={app.application_id}>
+                                        <td>{new Date(app.submitted_at || app.created_at).toLocaleDateString('en-GB')}</td>
+                                        <td>{app.buyer?.user ? `${app.buyer.user.first_name} ${app.buyer.user.last_name}` : '—'}</td>
+                                        <td>{app.car ? `${app.car.year} ${app.car.make} ${app.car.model}` : '—'}</td>
+                                        <td>{app.bank?.bank_name || '—'}</td>
+                                        <td>{app.seller?.business_name || '—'}</td>
+                                        <td>{(app.loan_amount || 0).toLocaleString()}</td>
+                                        <td><span className={`badge ${statusBadge(app.status)}`}>{app.status}</span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Revenue View
+function AdminRevenueView() {
+    const [disbursed, setDisbursed] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchRevenue();
+    }, []);
+
+    const fetchRevenue = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    disbursement_date,
+                    loan_amount,
+                    platform_fee_amount,
+                    disbursement_amount,
+                    buyer:buyers!buyer_id(user:users!buyers_user_id_fkey(first_name, last_name)),
+                    car:cars!car_id(make, model, year),
+                    seller:sellers!seller_id(business_name)
+                `)
+                .eq('status', 'disbursed')
+                .order('disbursement_date', { ascending: false });
+            setDisbursed(data || []);
+        } catch (error) {
+            console.error('Error fetching revenue:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getFee = (row) => parseFloat(row.platform_fee_amount || parseFloat(row.loan_amount || 0) * PLATFORM_FEE_RATE);
+
+    const totalRevenue = disbursed.reduce((s, a) => s + getFee(a), 0);
+    const totalDisbursed = disbursed.reduce((s, a) => s + parseFloat(a.disbursement_amount || 0), 0);
+    const totalTx = disbursed.length;
+    const avgFee = totalTx > 0 ? totalRevenue / totalTx : 0;
+
+    // Monthly breakdown — last 6 months
+    const monthlyData = (() => {
+        const now = new Date();
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+            const rows = disbursed.filter(a => {
+                const ad = new Date(a.disbursement_date);
+                return ad.getMonth() === d.getMonth() && ad.getFullYear() === d.getFullYear();
+            });
+            months.push({ label, count: rows.length, fees: rows.reduce((s, a) => s + getFee(a), 0) });
+        }
+        return months;
+    })();
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Revenue Tracking</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Platform fees earned from disbursed loans.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="stat-card">
+                    <div className="stat-label">Total Platform Revenue</div>
+                    <div className="stat-value">{totalRevenue.toLocaleString()}</div>
+                    <div className="stat-change">TZS earned</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Total Disbursed to Sellers</div>
+                    <div className="stat-value">{(totalDisbursed / 1000000).toFixed(1)}M</div>
+                    <div className="stat-change">TZS sent to sellers</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Total Transactions</div>
+                    <div className="stat-value">{totalTx}</div>
+                    <div className="stat-change">Disbursed loans</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Avg Fee per Transaction</div>
+                    <div className="stat-value">{avgFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div className="stat-change">TZS per loan</div>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Monthly Breakdown (Last 6 Months)</h3>
+                {loading ? (
+                    <p style={{ color: '#6c757d' }}>Loading...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Transactions</th>
+                                    <th>Platform Fees (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {monthlyData.map(m => (
+                                    <tr key={m.label}>
+                                        <td>{m.label}</td>
+                                        <td>{m.count}</td>
+                                        <td>{m.fees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Disbursement Records</h3>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading...</p>
+                ) : disbursed.length === 0 ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursed loans yet.</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Buyer</th>
+                                    <th>Car</th>
+                                    <th>Seller</th>
+                                    <th>Loan Amount (TZS)</th>
+                                    <th>Platform Fee (TZS)</th>
+                                    <th>Seller Received (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {disbursed.map(row => (
+                                    <tr key={row.application_id}>
+                                        <td>{row.disbursement_date ? new Date(row.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                        <td>{row.buyer?.user ? `${row.buyer.user.first_name} ${row.buyer.user.last_name}` : '—'}</td>
+                                        <td>{row.car ? `${row.car.year} ${row.car.make} ${row.car.model}` : '—'}</td>
+                                        <td>{row.seller?.business_name || '—'}</td>
+                                        <td>{(row.loan_amount || 0).toLocaleString()}</td>
+                                        <td>{getFee(row).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                        <td>{(row.disbursement_amount || 0).toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Analytics View
+function AdminAnalyticsView() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchAnalytics();
+    }, []);
+
+    const fetchAnalytics = async () => {
+        setLoading(true);
+        try {
+            const [
+                { count: totalBuyers },
+                { count: totalSellers },
+                { count: totalBanks },
+                { data: carsData },
+                { data: appsData }
+            ] = await Promise.all([
+                supabase.from('buyers').select('*', { count: 'exact', head: true }),
+                supabase.from('sellers').select('*', { count: 'exact', head: true }),
+                supabase.from('banks').select('*', { count: 'exact', head: true }),
+                supabase.from('cars').select('car_id, status'),
+                supabase.from('loan_applications').select('application_id, status, submitted_at, created_at').order('created_at', { ascending: false })
+            ]);
+
+            setData({
+                totalUsers: (totalBuyers || 0) + (totalSellers || 0) + (totalBanks || 0),
+                totalCars: carsData?.length || 0,
+                totalApplications: appsData?.length || 0,
+                totalDisbursed: appsData?.filter(a => a.status === 'disbursed').length || 0,
+                cars: carsData || [],
+                apps: appsData || []
+            });
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <div className="card"><p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading analytics...</p></div>;
+    if (!data) return null;
+
+    const appStatuses = ['submitted', 'approved', 'rejected', 'disbursed'];
+    const carStatuses = ['available', 'reserved', 'sold', 'draft'];
+
+    const appCounts = appStatuses.map(s => ({ label: s, count: data.apps.filter(a => a.status === s).length }));
+    const carCounts = carStatuses.map(s => ({ label: s, count: data.cars.filter(c => c.status === s).length }));
+    const maxApp = Math.max(...appCounts.map(x => x.count), 1);
+    const maxCar = Math.max(...carCounts.map(x => x.count), 1);
+
+    // Monthly applications — last 6 months
+    const now = new Date();
+    const monthlyApps = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        const label = d.toLocaleDateString('en-GB', { month: 'short' });
+        const count = data.apps.filter(a => {
+            const ad = new Date(a.submitted_at || a.created_at);
+            return ad.getMonth() === d.getMonth() && ad.getFullYear() === d.getFullYear();
+        }).length;
+        return { label, count };
+    });
+    const maxMonthly = Math.max(...monthlyApps.map(m => m.count), 1);
+
+    const statusColor = (s) => {
+        const map = { submitted: '#f59e0b', approved: '#10b981', rejected: '#ef4444', disbursed: '#667eea', available: '#10b981', reserved: '#f59e0b', sold: '#ef4444', draft: '#9ca3af' };
+        return map[s] || '#667eea';
+    };
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Platform Analytics</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Key metrics and trends across the platform.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="stat-card"><div className="stat-label">Total Users</div><div className="stat-value">{data.totalUsers}</div></div>
+                <div className="stat-card"><div className="stat-label">Total Cars</div><div className="stat-value">{data.totalCars}</div></div>
+                <div className="stat-card"><div className="stat-label">Total Applications</div><div className="stat-value">{data.totalApplications}</div></div>
+                <div className="stat-card"><div className="stat-label">Disbursed Loans</div><div className="stat-value">{data.totalDisbursed}</div></div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div className="card">
+                    <h3 className="card-title" style={{ marginBottom: '1rem' }}>Application Status Breakdown</h3>
+                    {appCounts.map(({ label, count }) => (
+                        <div key={label} style={{ marginBottom: '0.75rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                                <span style={{ textTransform: 'capitalize' }}>{label}</span>
+                                <span style={{ fontWeight: '600' }}>{count} ({data.totalApplications > 0 ? Math.round(count / data.totalApplications * 100) : 0}%)</span>
+                            </div>
+                            <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / maxApp) * 100}%`, background: statusColor(label), height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="card">
+                    <h3 className="card-title" style={{ marginBottom: '1rem' }}>Car Status Breakdown</h3>
+                    {carCounts.map(({ label, count }) => (
+                        <div key={label} style={{ marginBottom: '0.75rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                                <span style={{ textTransform: 'capitalize' }}>{label}</span>
+                                <span style={{ fontWeight: '600' }}>{count} ({data.totalCars > 0 ? Math.round(count / data.totalCars * 100) : 0}%)</span>
+                            </div>
+                            <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / maxCar) * 100}%`, background: statusColor(label), height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1.5rem' }}>Monthly Applications Trend (Last 6 Months)</h3>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '180px', paddingBottom: '0.5rem' }}>
+                    {monthlyApps.map(({ label, count }) => (
+                        <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{count}</span>
+                            <div style={{ width: '100%', background: '#667eea', borderRadius: '4px 4px 0 0', height: `${Math.max((count / maxMonthly) * 140, count > 0 ? 8 : 0)}px`, minHeight: count > 0 ? '8px' : '0', transition: 'height 0.3s' }} />
+                            <span style={{ fontSize: '11px', color: '#6c757d', marginTop: '6px' }}>{label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Settings View
+function AdminSettingsView() {
+    const [adminUsers, setAdminUsers] = useState([]);
+    const [platformInfo, setPlatformInfo] = useState({ activeBanks: 0, verifiedSellers: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        try {
+            const [{ data: admins }, { count: activeBanks }, { count: verifiedSellers }] = await Promise.all([
+                supabase.from('admins').select('admin_id, is_active, user:users!admins_user_id_fkey(first_name, last_name, email)'),
+                supabase.from('banks').select('*', { count: 'exact', head: true }),
+                supabase.from('sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified')
+            ]);
+            setAdminUsers(admins || []);
+            setPlatformInfo({ activeBanks: activeBanks || 0, verifiedSellers: verifiedSellers || 0 });
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Admin Settings</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Platform configuration and admin user management.</p>
+            </div>
+
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Platform Configuration</h3>
+                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>Platform Fee Rate</div>
+                            <div style={{ fontSize: '13px', color: '#6c757d' }}>To change this rate, update PLATFORM_FEE_RATE in App.js</div>
+                        </div>
+                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#667eea' }}>
+                            {(PLATFORM_FEE_RATE * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="stat-card">
+                        <div className="stat-label">Active Banks</div>
+                        <div className="stat-value">{platformInfo.activeBanks}</div>
+                        <div className="stat-change">Partner banks</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-label">Verified Sellers</div>
+                        <div className="stat-value">{platformInfo.verifiedSellers}</div>
+                        <div className="stat-change">Approved to list cars</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Admin Users</h3>
+                {loading ? (
+                    <p style={{ color: '#6c757d' }}>Loading...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {adminUsers.length === 0 ? (
+                                    <tr><td colSpan="3" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No admin users found</td></tr>
+                                ) : adminUsers.map(admin => (
+                                    <tr key={admin.admin_id}>
+                                        <td>{admin.user ? `${admin.user.first_name} ${admin.user.last_name}` : '—'}</td>
+                                        <td>{admin.user?.email || '—'}</td>
+                                        <td>
+                                            <span className={`badge ${admin.is_active ? 'badge-success' : 'badge-danger'}`}>
+                                                {admin.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
 // Main AdminDashboard Component
 function AdminDashboard() {
     const [view, setView] = useState('overview');
@@ -1234,44 +1931,14 @@ function AdminDashboard() {
         <>
             <AdminSidebar activeView={view} onNavigate={setView} />
             <div className="main-content" style={{ marginLeft: '260px', padding: '2rem' }}>
-                {view === 'overview' && <AdminOverview />}
+                {view === 'overview' && <AdminOverview onNavigate={setView} />}
                 {view === 'seller-verification' && <SellerVerification />}
-                {view === 'users' && (
-                    <div className="card">
-                        <h3>User Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View and manage all users.</p>
-                    </div>
-                )}
-                {view === 'cars' && (
-                    <div className="card">
-                        <h3>Car Listings Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Moderate and approve car listings.</p>
-                    </div>
-                )}
-                {view === 'applications' && (
-                    <div className="card">
-                        <h3>Application Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View all loan applications across the platform.</p>
-                    </div>
-                )}
-                {view === 'revenue' && (
-                    <div className="card">
-                        <h3>Revenue Tracking</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Track commissions and platform revenue.</p>
-                    </div>
-                )}
-                {view === 'analytics' && (
-                    <div className="card">
-                        <h3>Platform Analytics</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View detailed charts and insights.</p>
-                    </div>
-                )}
-                {view === 'settings' && (
-                    <div className="card">
-                        <h3>Admin Settings</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Configure platform settings and manage admin users.</p>
-                    </div>
-                )}
+                {view === 'users' && <AdminUsersView />}
+                {view === 'cars' && <AdminCarsView />}
+                {view === 'applications' && <AdminApplicationsView />}
+                {view === 'revenue' && <AdminRevenueView />}
+                {view === 'analytics' && <AdminAnalyticsView />}
+                {view === 'settings' && <AdminSettingsView />}
             </div>
         </>
     );
