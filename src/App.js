@@ -1352,7 +1352,8 @@ function Sidebar({ userType, activeView, onNavigate }) {
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
             { id: 'cars', label: 'My Cars', icon: '🚗' },
             { id: 'applications', label: 'Applications', icon: '📋' },
-            { id: 'payment-settings', label: 'Payment Settings', icon: '💳' }
+            { id: 'payment-settings', label: 'Payment Settings', icon: '💳' },
+            { id: 'add-car', label: 'Add New Car', icon: '➕' }
         ],
         bank: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -4866,7 +4867,10 @@ function SellerDashboard() {
 
     return (
         <>
-            <Sidebar userType="seller" activeView={view} onNavigate={setView} />
+            <Sidebar userType="seller" activeView={view} onNavigate={(id) => {
+                if (id === 'add-car') { handleAddCar(); }
+                else { setView(id); }
+            }} />
             <div className="main-content">
                 {view === 'dashboard' && (
                     <>
