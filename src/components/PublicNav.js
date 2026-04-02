@@ -63,7 +63,7 @@ function PublicNav() {
                         <img
                             src="/logo.png"
                             alt="AutoFinance"
-                            style={{ height: '190px', width: 'auto', marginTop: '-24px', display: 'block' }}
+                            style={{ height: '190px', width: 'auto', marginTop: '-8px', display: 'block' }}
                         />
                     </div>
                 </Link>
