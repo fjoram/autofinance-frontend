@@ -631,7 +631,7 @@ function AdminOverview() {
                         <tbody>
                             {recentActivity.map(activity => (
                                 <tr key={activity.application_id}>
-                                    <td>{new Date(activity.created_at).toLocaleDateString()}</td>
+                                    <td>{new Date(activity.created_at).toLocaleDateString('en-GB')}</td>
                                     <td>
                                         {activity.buyer?.user?.first_name} applied for{' '}
                                         {activity.car_make} {activity.car_model}
@@ -938,7 +938,7 @@ function SellerVerification() {
                                         )}
                                     </td>
                                     <td>
-                                        {new Date(seller.created_at).toLocaleDateString()}
+                                        {new Date(seller.created_at).toLocaleDateString('en-GB')}
                                     </td>
                                     <td>
                                         <button
@@ -997,7 +997,7 @@ function SellerVerification() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Registered:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                {new Date(selectedSeller.created_at).toLocaleDateString()}
+                                                {new Date(selectedSeller.created_at).toLocaleDateString('en-GB')}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -1117,7 +1117,7 @@ function SellerVerification() {
                                     </h4>
                                     {selectedSeller.verified_at && (
                                         <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '0.5rem' }}>
-                                            Date: {new Date(selectedSeller.verified_at).toLocaleDateString()}
+                                            Date: {new Date(selectedSeller.verified_at).toLocaleDateString('en-GB')}
                                         </p>
                                     )}
                                     {selectedSeller.verification_notes && (
@@ -1703,7 +1703,7 @@ function BuyerDashboard() {
                             myApplications.map(app => {
                                 const inspStatus = app.inspection_status;
                                 const inspDate = app.inspection_scheduled_date
-                                    ? new Date(app.inspection_scheduled_date).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' })
+                                    ? new Date(app.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
                                     : null;
 
                                 let inspectionBanner = null;
@@ -1725,7 +1725,7 @@ function BuyerDashboard() {
                                             <span style={{ color: '#10b981', fontWeight: 600 }}>✅ Inspection passed</span>
                                             {app.inspection_completed_date && (
                                                 <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
-                                                    on {new Date(app.inspection_completed_date).toLocaleDateString()}
+                                                    on {new Date(app.inspection_completed_date).toLocaleDateString('en-GB')}
                                                 </span>
                                             )}
                                         </div>
@@ -1762,7 +1762,7 @@ function BuyerDashboard() {
                                                     {app.bank?.bank_name} · TZS {app.loan_amount?.toLocaleString()} · {app.loan_term_months} months
                                                 </p>
                                                 <p style={{ margin: '0.15rem 0 0', color: '#6c757d', fontSize: '0.8125rem' }}>
-                                                    Applied: {new Date(app.submitted_at).toLocaleDateString()}
+                                                    Applied: {new Date(app.submitted_at).toLocaleDateString('en-GB')}
                                                 </p>
                                             </div>
                                             <span style={{ background: sc.bg, color: sc.color, padding: '0.3rem 0.8rem', borderRadius: '20px', fontWeight: 600, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
@@ -2688,7 +2688,7 @@ function ApproveWithInspectionModal({ application, onClose, onApproved }) {
             }
 
             alert(requireInspection
-                ? `✅ Approved! Inspection scheduled for ${new Date(scheduledDateTime).toLocaleDateString()}.`
+                ? `✅ Approved! Inspection scheduled for ${new Date(scheduledDateTime).toLocaleDateString('en-GB')}.`
                 : '✅ Application approved!'
             );
             onApproved();
@@ -2870,7 +2870,7 @@ function InspectionReportModal({ application, onClose, onSaved }) {
                         <strong>🔍 {application.car_make} {application.car_model} {application.car_year}</strong>
                         {application.inspection_scheduled_date && (
                             <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.25rem' }}>
-                                Scheduled: {new Date(application.inspection_scheduled_date).toLocaleString()}
+                                Scheduled: {new Date(application.inspection_scheduled_date).toLocaleString('en-GB')}
                             </div>
                         )}
                     </div>
@@ -3069,7 +3069,7 @@ function PostApprovalTracker({ application, onUpdate }) {
                     <>
                         {scheduledDate && (
                             <div style={{ fontSize: '13px', marginBottom: '0.75rem', color: '#525252' }}>
-                                📅 <strong>Scheduled:</strong> {new Date(scheduledDate).toLocaleString()}
+                                📅 <strong>Scheduled:</strong> {new Date(scheduledDate).toLocaleString('en-GB')}
                                 {report?.inspector_name && <> · <strong>Inspector:</strong> {report.inspector_name}</>}
                             </div>
                         )}
@@ -3078,7 +3078,7 @@ function PostApprovalTracker({ application, onUpdate }) {
                         {report?.submitted_at && (
                             <div style={{ background: report.overall_result === 'pass' ? '#d1f4e0' : '#ffe0e0', borderRadius: '6px', padding: '0.875rem', marginBottom: '0.875rem', fontSize: '13px' }}>
                                 <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
-                                    {report.overall_result === 'pass' ? '✅ PASSED' : '❌ FAILED'} — {new Date(report.submitted_at).toLocaleDateString()}
+                                    {report.overall_result === 'pass' ? '✅ PASSED' : '❌ FAILED'} — {new Date(report.submitted_at).toLocaleDateString('en-GB')}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 1rem' }}>
                                     {['engine','body','interior','tires'].map(k => (
@@ -3579,7 +3579,7 @@ function BankDashboard() {
                                                 <td>{app.car_make} {app.car_model} {app.car_year}</td>
                                                 <td>TZS {parseFloat(app.loan_amount).toLocaleString()}</td>
                                                 <td>{getStatusBadge(app.status)}</td>
-                                                <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
+                                                <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
                                                 <td>
                                                     {app.status === 'submitted' ? (
                                                         <button 
@@ -3820,7 +3820,7 @@ function BankDashboard() {
 
                             {selectedApplication.status === 'approved' && selectedApplication.approved_at && (
                                 <div className="card" style={{ background: '#d1f4e0', borderColor: '#0f6938' }}>
-                                    <strong>✓ Approved on {new Date(selectedApplication.approved_at).toLocaleDateString()}</strong>
+                                    <strong>✓ Approved on {new Date(selectedApplication.approved_at).toLocaleDateString('en-GB')}</strong>
                                 </div>
                             )}
 
@@ -4804,7 +4804,7 @@ function SellerDashboard() {
             const trend = [];
             for (let i = 5; i >= 0; i--) {
                 const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const monthLabel = d.toLocaleString('default', { month: 'short' });
+                const monthLabel = d.toLocaleString('en-GB', { month: 'short' });
                 const yr = d.getFullYear();
                 const mo = d.getMonth();
                 const count = appsData?.filter(a => {
@@ -4964,7 +4964,7 @@ function SellerDashboard() {
                                                                 app.status === 'rejected' ? 'danger' : 'warning'
                                                             }`}>{app.status}</span>
                                                         </td>
-                                                        <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
+                                                        <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -4979,7 +4979,7 @@ function SellerDashboard() {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             {upcomingInspections.map(insp => {
                                                 const dt = insp.inspection_scheduled_date
-                                                    ? new Date(insp.inspection_scheduled_date).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' })
+                                                    ? new Date(insp.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
                                                     : 'TBD';
                                                 const inspector = insp.inspection_report?.inspector_name;
                                                 return (
@@ -5196,7 +5196,7 @@ function SellerDashboard() {
                                                             {app.status}
                                                         </span>
                                                     </td>
-                                                    <td>{new Date(app.submitted_at).toLocaleDateString()}</td>
+                                                    <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
