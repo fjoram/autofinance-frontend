@@ -802,7 +802,7 @@ function SellerVerification() {
             fetchSellers();
         } catch (error) {
             console.error('Error approving seller:', error);
-            alert('❌ Error approving seller: ' + error.message);
+            alert('❌ Error approving seller: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -843,7 +843,7 @@ function SellerVerification() {
             fetchSellers();
         } catch (error) {
             console.error('Error rejecting seller:', error);
-            alert('❌ Error rejecting seller: ' + error.message);
+            alert('❌ Error rejecting seller: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -1462,7 +1462,7 @@ function AdminApplicationsView() {
                                 ) : filtered.map(app => (
                                     <tr key={app.application_id}>
                                         <td>{new Date(app.submitted_at || app.created_at).toLocaleDateString('en-GB')}</td>
-                                        <td>{app.buyer?.user ? `${app.buyer.user.first_name} ${app.buyer.user.last_name}` : '—'}</td>
+                                        <td>{[app.buyer?.user?.first_name, app.buyer?.user?.last_name].filter(Boolean).join(' ') || '—'}</td>
                                         <td>{app.car ? `${app.car.year} ${app.car.make} ${app.car.model}` : '—'}</td>
                                         <td>{app.bank?.bank_name || '—'}</td>
                                         <td>{app.seller?.business_name || '—'}</td>
@@ -2098,7 +2098,7 @@ function BuyerDashboard() {
         setAppsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) { setAppsLoading(false); return; }
 
             const { data: buyerData } = await supabase
                 .from('buyers')
@@ -2106,7 +2106,7 @@ function BuyerDashboard() {
                 .eq('user_id', user.id)
                 .single();
 
-            if (!buyerData) return;
+            if (!buyerData) { setAppsLoading(false); return; }
 
             const { data, error } = await supabase
                 .from('loan_applications')
@@ -2294,7 +2294,7 @@ function BuyerDashboard() {
             setSelectedCar(null);
         } catch (error) {
             console.error('Error submitting application:', error);
-            alert('❌ Error submitting application: ' + error.message);
+            alert('❌ Error submitting application: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -2845,7 +2845,7 @@ function ProductsView() {
             fetchProducts();
         } catch (error) {
             console.error('Error saving product:', error);
-            alert('❌ Error saving product: ' + error.message);
+            alert('❌ Error saving product: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -3138,7 +3138,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
             onClose();
         } catch (error) {
             console.error('Error processing disbursement:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setProcessing(false);
         }
@@ -3381,7 +3381,7 @@ function ApproveWithInspectionModal({ application, onClose, onApproved }) {
             onApproved();
             onClose();
         } catch (error) {
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setProcessing(false);
         }
@@ -3529,7 +3529,7 @@ function InspectionReportModal({ application, onClose, onSaved }) {
                 })
                 .eq('application_id', application.application_id);
             if (error) throw error;
-            alert(`✅ Inspection report submitted. Result: ${report.overall_result.toUpperCase()}`);
+            alert(`✅ Inspection report submitted. Result: ${report.overall_result?.toUpperCase() || 'Unknown'}`);
             onSaved();
             onClose();
         } catch (err) {
@@ -3996,7 +3996,7 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                     <td>
                                         <div>
                                             <strong>
-                                                {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
+                                                {[app.buyer?.user?.first_name, app.buyer?.user?.last_name].filter(Boolean).join(' ') || '—'}
                                             </strong>
                                             <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
                                                 {app.buyer?.user?.email}
@@ -4012,10 +4012,10 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                         </div>
                                     </td>
                                     <td>
-                                        <strong>TZS {parseFloat(app.loan_amount).toLocaleString()}</strong>
+                                        <strong>TZS {(parseFloat(app.loan_amount) || 0).toLocaleString()}</strong>
                                     </td>
                                     <td>
-                                        TZS {parseFloat(app.monthly_payment).toLocaleString()}
+                                        TZS {(parseFloat(app.monthly_payment) || 0).toLocaleString()}
                                     </td>
                                     <td>{app.loan_term_months} months</td>
                                     <td>{getStatusBadge(app.status)}</td>
@@ -4335,7 +4335,7 @@ function BankDashboard() {
                                                     {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
                                                 </td>
                                                 <td>{app.car_make} {app.car_model} {app.car_year}</td>
-                                                <td>TZS {parseFloat(app.loan_amount).toLocaleString()}</td>
+                                                <td>TZS {(parseFloat(app.loan_amount) || 0).toLocaleString()}</td>
                                                 <td>{getStatusBadge(app.status)}</td>
                                                 <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
                                                 <td>
@@ -4453,7 +4453,7 @@ function BankDashboard() {
         {(() => {
             const disbursed = applications.filter(a => a.status === 'disbursed');
             const totalLoans = disbursed.reduce((s, a) => s + parseFloat(a.loan_amount || 0), 0);
-            const totalPlatformFee = disbursed.reduce((s, a) => s + parseFloat(a.platform_fee_amount || a.loan_amount * PLATFORM_FEE_RATE || 0), 0);
+            const totalPlatformFee = disbursed.reduce((s, a) => s + parseFloat(a.platform_fee_amount || (parseFloat(a.loan_amount) || 0) * PLATFORM_FEE_RATE), 0);
             const totalProcessingFees = disbursed.reduce((s, a) => s + parseFloat(a.processing_fee || 0), 0);
             const totalInterestIncome = disbursed.reduce((s, a) => s + parseFloat(a.total_interest || 0), 0);
             return (
@@ -4689,19 +4689,19 @@ function BankDashboard() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Car Price:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                TZS {parseFloat(selectedApplication.car_price).toLocaleString()}
+                                                TZS {(parseFloat(selectedApplication.car_price) || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Down Payment:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                TZS {parseFloat(selectedApplication.down_payment).toLocaleString()}
+                                                TZS {(parseFloat(selectedApplication.down_payment) || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Loan Amount:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                <strong>TZS {parseFloat(selectedApplication.loan_amount).toLocaleString()}</strong>
+                                                <strong>TZS {(parseFloat(selectedApplication.loan_amount) || 0).toLocaleString()}</strong>
                                             </td>
                                         </tr>
                                         <tr>
@@ -4715,7 +4715,7 @@ function BankDashboard() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Monthly Payment:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                <strong>TZS {parseFloat(selectedApplication.monthly_payment).toLocaleString()}</strong>
+                                                <strong>TZS {(parseFloat(selectedApplication.monthly_payment) || 0).toLocaleString()}</strong>
                                             </td>
                                         </tr>
                                         <tr>
@@ -4959,7 +4959,7 @@ function AddCarModal({ car, onClose, onSuccess }) {
             onSuccess();
         } catch (error) {
             console.error('Error saving car:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setLoading(false);
         }
@@ -5431,7 +5431,7 @@ function PaymentSettings() {
             alert('✅ Payment details saved successfully!');
         } catch (error) {
             console.error('Error saving payment info:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setSaving(false);
         }
@@ -6338,7 +6338,7 @@ function ProtectedRoute({ children, allowedUserType }) {
     }
 
     // Check user type if specified
-    if (allowedUserType && user.user_metadata.user_type !== allowedUserType) {
+    if (allowedUserType && user?.user_metadata?.user_type !== allowedUserType) {
         return <Navigate to="/login" />;
     }
 
