@@ -98,21 +98,21 @@ function PublicHomePage() {
             {/* HERO */}
             <section style={{
                 background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
-                padding: '2.5rem 2rem 3rem',
+                padding: '1.25rem 2rem 1.75rem',
                 color: 'white',
                 textAlign: 'center',
                 position: 'relative',
                 overflow: 'hidden'
             }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '0.4rem' }}>
                         Tanzania's #1 Auto Finance Platform
                     </div>
-                    <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1rem' }}>
-                        Find Your Dream Car.<br />Finance It in Minutes.
+                    <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2.25rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '0.5rem' }}>
+                        Find Your Dream Car. Finance It in Minutes.
                     </h1>
-                    <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '2.5rem', maxWidth: '560px', margin: '0 auto 2.5rem' }}>
-                        Browse thousands of verified cars and compare financing from Tanzania's top banks — all in one place.
+                    <p style={{ fontSize: '0.9375rem', opacity: 0.9, maxWidth: '560px', margin: '0 auto 0.875rem' }}>
+                        Browse verified cars and compare financing from Tanzania's top banks — all in one place.
                     </p>
 
                     {/* Search Bar */}
@@ -124,10 +124,10 @@ function PublicHomePage() {
                             placeholder="Search by make, model, or location..."
                             style={{
                                 flex: 1,
-                                padding: '1rem 1.25rem',
+                                padding: '0.75rem 1rem',
                                 borderRadius: '4px',
                                 border: 'none',
-                                fontSize: '1rem',
+                                fontSize: '0.9375rem',
                                 outline: 'none',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                             }}
@@ -136,10 +136,10 @@ function PublicHomePage() {
                             background: '#f59e0b',
                             color: 'white',
                             border: 'none',
-                            padding: '1rem 1.75rem',
+                            padding: '0.75rem 1.5rem',
                             borderRadius: '4px',
                             fontWeight: 700,
-                            fontSize: '1rem',
+                            fontSize: '0.9375rem',
                             cursor: 'pointer',
                             whiteSpace: 'nowrap'
                         }}>
@@ -147,7 +147,7 @@ function PublicHomePage() {
                         </button>
                     </form>
 
-                    <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', opacity: 0.8, fontSize: '0.875rem' }}>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', opacity: 0.8, fontSize: '0.8125rem' }}>
                         <span>🚗 Toyota</span>
                         <span>🚗 BMW</span>
                         <span>🚗 Mercedes</span>
