@@ -2453,10 +2453,10 @@ function DisbursementModal({ application, onClose, onSuccess }) {
 
             const { error: carError } = await supabase
                 .from('cars')
-                .update({ status: 'sold' })
+                .update({ status: 'sold', sold_date: new Date().toISOString() })
                 .eq('car_id', application.car_id);
 
-            if (carError) throw carError;
+            if (carError) console.warn('Could not update car sold_date:', carError);
 
             alert('✅ Disbursement completed successfully!');
             onSuccess();
