@@ -1359,7 +1359,8 @@ function Sidebar({ userType, activeView, onNavigate }) {
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
             { id: 'applications', label: 'Applications', icon: '📋' },
             { id: 'products', label: 'Loan Products', icon: '💰' },
-            { id: 'analytics', label: 'Analytics', icon: '📈' }
+            { id: 'disbursements', label: 'Disbursement History', icon: '💸' },
+            { id: 'commission', label: 'Commission', icon: '📈' }
         ],
         insurance: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -3001,6 +3002,8 @@ function PostApprovalTracker({ application, onUpdate }) {
     const [inspectionStatus, setInspectionStatus] = useState(application.inspection_status || 'pending');
     const [gpsInstalled, setGpsInstalled] = useState(application.gps_tracker_installed || false);
     const [logbookTransferred, setLogbookTransferred] = useState(application.logbook_transferred_to_bank || false);
+    const [gpsSerial, setGpsSerial] = useState(application.gps_tracker_serial || '');
+    const [savingSerial, setSavingSerial] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
 
@@ -3030,6 +3033,14 @@ function PostApprovalTracker({ application, onUpdate }) {
         const newVal = !logbookTransferred;
         setLogbookTransferred(newVal);
         await update({ logbook_transferred_to_bank: newVal, logbook_transfer_date: newVal ? new Date().toISOString() : null });
+    };
+
+    const handleSaveSerial = async () => {
+        if (!gpsSerial.trim()) return;
+        setSavingSerial(true);
+        await update({ gps_tracker_serial: gpsSerial.trim() });
+        setSavingSerial(false);
+        alert('GPS serial number saved.');
     };
 
     const handleInspectionFail = async (action) => {
@@ -3162,6 +3173,29 @@ function PostApprovalTracker({ application, onUpdate }) {
                         </span>
                     </label>
                 </div>
+                {/* Serial number */}
+                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={gpsSerial}
+                        onChange={e => setGpsSerial(e.target.value)}
+                        placeholder="GPS tracker serial number"
+                        style={{ flex: 1, fontSize: '13px', padding: '0.375rem 0.625rem' }}
+                    />
+                    <button
+                        className="btn btn-sm btn-outline"
+                        onClick={handleSaveSerial}
+                        disabled={savingSerial || !gpsSerial.trim()}
+                    >
+                        {savingSerial ? 'Saving…' : 'Save'}
+                    </button>
+                </div>
+                {application.gps_tracker_serial && (
+                    <div style={{ fontSize: '12px', color: '#10b981', marginTop: '0.35rem' }}>
+                        Recorded serial: <strong>{application.gps_tracker_serial}</strong>
+                    </div>
+                )}
             </div>
 
             {/* ── LOGBOOK ── */}
@@ -3651,6 +3685,153 @@ function BankDashboard() {
 )}
 
 
+{view === 'disbursements' && (
+    <>
+        <div className="card-header">
+            <h1 className="card-title">Disbursement History</h1>
+            <p className="card-subtitle">All completed fund transfers to sellers</p>
+        </div>
+        {(() => {
+            const disbursed = applications.filter(a => a.status === 'disbursed');
+            const totalDisbursed = disbursed.reduce((s, a) => s + parseFloat(a.disbursement_amount || a.loan_amount || 0), 0);
+            return (
+                <>
+                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+                        <div className="stat-card">
+                            <div className="stat-label">Total Disbursed</div>
+                            <div className="stat-value">{(totalDisbursed / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Transactions</div>
+                            <div className="stat-value">{disbursed.length}</div>
+                            <div className="stat-change">Completed</div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        {disbursed.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursements yet.</p>
+                        ) : (
+                            <div className="table-scroll">
+                                <table className="comparison-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Buyer</th>
+                                            <th>Car</th>
+                                            <th>Seller</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {disbursed.sort((a,b) => new Date(b.disbursement_date) - new Date(a.disbursement_date)).map(app => (
+                                            <tr key={app.application_id}>
+                                                <td style={{ whiteSpace: 'nowrap' }}>{app.disbursement_date ? new Date(app.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                                <td>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</td>
+                                                <td>{app.car_make} {app.car_model} {app.car_year}</td>
+                                                <td>{app.seller?.business_name}</td>
+                                                <td style={{ textTransform: 'capitalize' }}>{(app.disbursement_method || '—').replace(/_/g, ' ')}</td>
+                                                <td><code style={{ fontSize: '12px' }}>{app.disbursement_reference || '—'}</code></td>
+                                                <td><strong>TZS {parseFloat(app.disbursement_amount || app.loan_amount || 0).toLocaleString()}</strong></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            );
+        })()}
+    </>
+)}
+
+{view === 'commission' && (
+    <>
+        <div className="card-header">
+            <h1 className="card-title">Commission Breakdown</h1>
+            <p className="card-subtitle">Platform fees and your earnings per disbursed loan</p>
+        </div>
+        {(() => {
+            const disbursed = applications.filter(a => a.status === 'disbursed');
+            const PLATFORM_RATE = 0.005; // 0.5% platform fee
+            const totalLoans = disbursed.reduce((s, a) => s + parseFloat(a.loan_amount || 0), 0);
+            const totalPlatformFee = totalLoans * PLATFORM_RATE;
+            const totalProcessingFees = disbursed.reduce((s, a) => s + parseFloat(a.processing_fee || 0), 0);
+            const totalInterestIncome = disbursed.reduce((s, a) => s + parseFloat(a.total_interest || 0), 0);
+            return (
+                <>
+                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+                        <div className="stat-card">
+                            <div className="stat-label">Total Loan Book</div>
+                            <div className="stat-value">{(totalLoans / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS disbursed</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Processing Fees Collected</div>
+                            <div className="stat-value">{(totalProcessingFees / 1000).toFixed(0)}K</div>
+                            <div className="stat-change">TZS</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Est. Interest Income</div>
+                            <div className="stat-value">{(totalInterestIncome / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS (full term)</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Platform Fees Paid</div>
+                            <div className="stat-value">{(totalPlatformFee / 1000).toFixed(0)}K</div>
+                            <div className="stat-change">TZS (0.5%)</div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        <h3 className="card-title" style={{ marginBottom: '1rem' }}>Per-Loan Breakdown</h3>
+                        {disbursed.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursed loans yet.</p>
+                        ) : (
+                            <div className="table-scroll">
+                                <table className="comparison-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Buyer</th>
+                                            <th>Car</th>
+                                            <th>Loan Amount</th>
+                                            <th>Rate</th>
+                                            <th>Processing Fee</th>
+                                            <th>Est. Interest</th>
+                                            <th>Platform Fee</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {disbursed.sort((a,b) => new Date(b.disbursement_date) - new Date(a.disbursement_date)).map(app => {
+                                            const loan = parseFloat(app.loan_amount || 0);
+                                            const platFee = loan * PLATFORM_RATE;
+                                            return (
+                                                <tr key={app.application_id}>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>{app.disbursement_date ? new Date(app.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                                    <td>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</td>
+                                                    <td>{app.car_make} {app.car_model} {app.car_year}</td>
+                                                    <td>TZS {loan.toLocaleString()}</td>
+                                                    <td>{app.interest_rate}%</td>
+                                                    <td>TZS {parseFloat(app.processing_fee || 0).toLocaleString()}</td>
+                                                    <td>TZS {parseFloat(app.total_interest || 0).toLocaleString()}</td>
+                                                    <td style={{ color: '#dc2626' }}>TZS {platFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            );
+        })()}
+    </>
+)}
+
 {view === 'applications' && (
     <>
         <div className="card-header">
@@ -3658,7 +3839,7 @@ function BankDashboard() {
             <p className="card-subtitle">Manage loan applications</p>
         </div>
 
-        <ApplicationsView 
+        <ApplicationsView
             applications={applications}
             loading={loading}
             onSelectApplication={setSelectedApplication}
