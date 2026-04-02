@@ -109,10 +109,10 @@ function PublicHomePage() {
                         Tanzania's #1 Auto Finance Platform
                     </div>
                     <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2.25rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '0.5rem' }}>
-                        Find Your Dream Car. Finance It in Minutes.
+                        Find Your Dream Car.<br />Finance It in Minutes.
                     </h1>
-                    <p style={{ fontSize: '0.9375rem', opacity: 0.9, maxWidth: '560px', margin: '0 auto 0.875rem' }}>
-                        Browse verified cars and compare financing from Tanzania's top banks — all in one place.
+                    <p style={{ fontSize: '0.875rem', opacity: 0.9, maxWidth: '500px', margin: '0 auto 0.875rem' }}>
+                        Compare financing from Tanzania's top banks — all in one place.
                     </p>
 
                     {/* Search Bar */}
