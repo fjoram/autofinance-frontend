@@ -9,6 +9,9 @@ import PublicCarDetails from './components/PublicCarDetails';
 import { HowItWorksPage, AboutPage } from './components/PublicInfoPages';
 import './App.css';
 
+// Platform configuration
+const PLATFORM_FEE_RATE = 0.005; // 0.5% of loan amount charged to bank/deducted from disbursement
+
 // Mock Data
 const MOCK_CARS = [
     {
@@ -2415,6 +2418,10 @@ function DisbursementModal({ application, onClose, onSuccess }) {
     });
     const [processing, setProcessing] = useState(false);
 
+    const loanAmount = parseFloat(application.loan_amount || 0);
+    const platformFee = Math.round(loanAmount * PLATFORM_FEE_RATE);
+    const sellerAmount = loanAmount - platformFee;
+
     const handleDisburse = async () => {
         if (!disbursementData.reference.trim()) {
             alert('❌ Please enter payment reference number');
@@ -2427,7 +2434,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
         }
 
         const confirmed = window.confirm(
-            `Are you sure you want to disburse TZS ${application.loan_amount.toLocaleString()}?\n\nThis action cannot be undone.`
+            `Confirm disbursement:\n\nLoan Amount:    TZS ${loanAmount.toLocaleString()}\nPlatform Fee:   TZS ${platformFee.toLocaleString()} (0.5%)\nSeller Receives: TZS ${sellerAmount.toLocaleString()}\n\nThis action cannot be undone.`
         );
 
         if (!confirmed) return;
@@ -2443,7 +2450,8 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                     disbursement_date: new Date().toISOString(),
                     disbursement_reference: disbursementData.reference,
                     disbursement_method: application.seller?.payment_method || 'bank_transfer',
-                    disbursement_amount: application.loan_amount,
+                    disbursement_amount: sellerAmount,
+                    platform_fee_amount: platformFee,
                     disbursed_by: user.id,
                     disbursement_notes: disbursementData.notes || null
                 })
@@ -2458,7 +2466,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
 
             if (carError) console.warn('Could not update car sold_date:', carError);
 
-            alert('✅ Disbursement completed successfully!');
+            alert(`✅ Disbursement completed!\n\nTZS ${sellerAmount.toLocaleString()} sent to seller.\nTZS ${platformFee.toLocaleString()} retained as platform fee.`);
             onSuccess();
             onClose();
         } catch (error) {
@@ -2478,26 +2486,36 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                 </div>
 
                 <div className="modal-body">
-                    <div className="card" style={{ background: '#f0fdf4', marginBottom: '1.5rem' }}>
-                        <h4 style={{ marginBottom: '1rem', color: '#065f46' }}>📋 Loan Summary</h4>
+                    <div className="card" style={{ background: '#f0fdf4', marginBottom: '1.5rem', borderLeft: '4px solid #10b981' }}>
+                        <h4 style={{ marginBottom: '1rem', color: '#065f46' }}>Disbursement Breakdown</h4>
                         <table style={{ width: '100%', fontSize: '14px' }}>
                             <tbody>
                                 <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold', width: '40%' }}>Loan Amount:</td>
-                                    <td style={{ padding: '0.5rem', fontSize: '16px', fontWeight: '700', color: '#065f46' }}>
-                                        TZS {application.loan_amount?.toLocaleString()}
-                                    </td>
+                                    <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold', width: '55%' }}>Car:</td>
+                                    <td style={{ padding: '0.4rem 0.5rem' }}>{application.car_make} {application.car_model} {application.car_year}</td>
                                 </tr>
                                 <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Car:</td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {application.car_make} {application.car_model} {application.car_year}
+                                    <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold' }}>Buyer:</td>
+                                    <td style={{ padding: '0.4rem 0.5rem' }}>{application.buyer?.user?.first_name} {application.buyer?.user?.last_name}</td>
+                                </tr>
+                                <tr style={{ borderTop: '1px solid #d1fae5', marginTop: '0.5rem' }}>
+                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Total Loan Amount:</td>
+                                    <td style={{ padding: '0.5rem', fontWeight: '700' }}>TZS {loanAmount.toLocaleString()}</td>
+                                </tr>
+                                <tr style={{ background: '#fff7ed' }}>
+                                    <td style={{ padding: '0.5rem', color: '#d97706' }}>
+                                        Platform Fee (0.5%):
+                                    </td>
+                                    <td style={{ padding: '0.5rem', color: '#d97706', fontWeight: '600' }}>
+                                        − TZS {platformFee.toLocaleString()}
                                     </td>
                                 </tr>
-                                <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Buyer:</td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {application.buyer?.user?.first_name} {application.buyer?.user?.last_name}
+                                <tr style={{ background: '#d1fae5' }}>
+                                    <td style={{ padding: '0.5rem', fontWeight: 'bold', fontSize: '15px' }}>
+                                        Seller Receives:
+                                    </td>
+                                    <td style={{ padding: '0.5rem', fontWeight: '800', fontSize: '16px', color: '#065f46' }}>
+                                        TZS {sellerAmount.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -3729,7 +3747,9 @@ function BankDashboard() {
                                             <th>Seller</th>
                                             <th>Method</th>
                                             <th>Reference</th>
-                                            <th>Amount</th>
+                                            <th>Loan Amount</th>
+                                            <th>Platform Fee</th>
+                                            <th>Seller Received</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -3741,7 +3761,9 @@ function BankDashboard() {
                                                 <td>{app.seller?.business_name}</td>
                                                 <td style={{ textTransform: 'capitalize' }}>{(app.disbursement_method || '—').replace(/_/g, ' ')}</td>
                                                 <td><code style={{ fontSize: '12px' }}>{app.disbursement_reference || '—'}</code></td>
-                                                <td><strong>TZS {parseFloat(app.disbursement_amount || app.loan_amount || 0).toLocaleString()}</strong></td>
+                                                <td>TZS {parseFloat(app.loan_amount || 0).toLocaleString()}</td>
+                                                <td style={{ color: '#d97706' }}>TZS {parseFloat(app.platform_fee_amount || parseFloat(app.loan_amount || 0) * PLATFORM_FEE_RATE).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                                <td><strong style={{ color: '#065f46' }}>TZS {parseFloat(app.disbursement_amount || app.loan_amount || 0).toLocaleString()}</strong></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -3763,9 +3785,8 @@ function BankDashboard() {
         </div>
         {(() => {
             const disbursed = applications.filter(a => a.status === 'disbursed');
-            const PLATFORM_RATE = 0.005; // 0.5% platform fee
             const totalLoans = disbursed.reduce((s, a) => s + parseFloat(a.loan_amount || 0), 0);
-            const totalPlatformFee = totalLoans * PLATFORM_RATE;
+            const totalPlatformFee = disbursed.reduce((s, a) => s + parseFloat(a.platform_fee_amount || a.loan_amount * PLATFORM_FEE_RATE || 0), 0);
             const totalProcessingFees = disbursed.reduce((s, a) => s + parseFloat(a.processing_fee || 0), 0);
             const totalInterestIncome = disbursed.reduce((s, a) => s + parseFloat(a.total_interest || 0), 0);
             return (
@@ -3814,7 +3835,7 @@ function BankDashboard() {
                                     <tbody>
                                         {disbursed.sort((a,b) => new Date(b.disbursement_date) - new Date(a.disbursement_date)).map(app => {
                                             const loan = parseFloat(app.loan_amount || 0);
-                                            const platFee = loan * PLATFORM_RATE;
+                                            const platFee = parseFloat(app.platform_fee_amount || loan * PLATFORM_FEE_RATE);
                                             return (
                                                 <tr key={app.application_id}>
                                                     <td style={{ whiteSpace: 'nowrap' }}>{app.disbursement_date ? new Date(app.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
