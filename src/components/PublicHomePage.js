@@ -57,23 +57,33 @@ function PublicHomePage() {
     }, []);
 
     const fetchFeaturedCars = async () => {
-        const { data } = await supabase
-            .from('cars')
-            .select('car_id, make, model, year, price, mileage, location_city, images, condition, is_featured, body_type')
-            .eq('status', 'available')
-            .order('is_featured', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(6);
-        setFeaturedCars(data || []);
+        try {
+            const { data } = await supabase
+                .from('cars')
+                .select('car_id, make, model, year, price, mileage, location_city, images, condition, is_featured, body_type')
+                .eq('status', 'available')
+                .order('is_featured', { ascending: false })
+                .order('created_at', { ascending: false })
+                .limit(6);
+            setFeaturedCars(data || []);
+        } catch (error) {
+            console.error('Error fetching featured cars:', error);
+            setFeaturedCars([]);
+        }
     };
 
     const fetchStats = async () => {
-        const [{ count: cars }, { count: banks }, { count: apps }] = await Promise.all([
-            supabase.from('cars').select('*', { count: 'exact', head: true }).eq('status', 'available'),
-            supabase.from('banks').select('*', { count: 'exact', head: true }).eq('is_active', true),
-            supabase.from('loan_applications').select('*', { count: 'exact', head: true })
-        ]);
-        setStats({ cars: cars || 0, banks: banks || 0, applications: apps || 0 });
+        try {
+            const [{ count: cars }, { count: banks }, { count: apps }] = await Promise.all([
+                supabase.from('cars').select('*', { count: 'exact', head: true }).eq('status', 'available'),
+                supabase.from('banks').select('*', { count: 'exact', head: true }).eq('is_active', true),
+                supabase.from('loan_applications').select('*', { count: 'exact', head: true })
+            ]);
+            setStats({ cars: cars || 0, banks: banks || 0, applications: apps || 0 });
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+            setStats({ cars: 0, banks: 0, applications: 0 });
+        }
     };
 
     const handleSearch = (e) => {

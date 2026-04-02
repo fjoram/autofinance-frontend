@@ -155,7 +155,12 @@ function PublicCarDetails() {
         );
     }
 
-    if (!car) return null;
+    if (!car) return (
+        <div style={{ textAlign: 'center', padding: '4rem' }}>
+            <p style={{ color: '#6c757d', marginBottom: '1rem' }}>Car not found or no longer available.</p>
+            <button className="btn btn-primary" onClick={() => navigate('/cars')}>Back to Browse</button>
+        </div>
+    );
 
     const images = car.images?.length ? car.images : [null];
     const loanComparison = loanProducts
@@ -325,7 +330,7 @@ function PublicCarDetails() {
                             <div className="pub-calc-controls">
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: '#525252' }}>
-                                        Down Payment: {downPct}% (TZS {(car.price * downPct / 100).toLocaleString()})
+                                        Down Payment: {downPct}% (TZS {((car.price || 0) * downPct / 100).toLocaleString()})
                                     </label>
                                     <input
                                         type="range" min="10" max="60" step="5"
@@ -363,11 +368,11 @@ function PublicCarDetails() {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8125rem', color: '#525252' }}>Down Payment ({downPct}%)</div>
-                                    <div style={{ fontWeight: 700 }}>TZS {(car.price * downPct / 100).toLocaleString()}</div>
+                                    <div style={{ fontWeight: 700 }}>TZS {((car.price || 0) * downPct / 100).toLocaleString()}</div>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8125rem', color: '#525252' }}>Loan Amount</div>
-                                    <div style={{ fontWeight: 700, color: '#0f62fe' }}>TZS {(car.price * (1 - downPct / 100)).toLocaleString()}</div>
+                                    <div style={{ fontWeight: 700, color: '#0f62fe' }}>TZS {((car.price || 0) * (1 - downPct / 100)).toLocaleString()}</div>
                                 </div>
                             </div>
 

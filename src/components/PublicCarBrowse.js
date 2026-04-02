@@ -46,18 +46,25 @@ function PublicCarBrowse() {
 
     const fetchCars = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('cars')
-            .select(`
-                car_id, make, model, year, price, mileage, location_city, location_region,
-                images, condition, body_type, transmission, fuel_type, is_featured, created_at,
-                seller:sellers(business_name, verification_status)
-            `)
-            .eq('status', 'available')
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error } = await supabase
+                .from('cars')
+                .select(`
+                    car_id, make, model, year, price, mileage, location_city, location_region,
+                    images, condition, body_type, transmission, fuel_type, is_featured, created_at,
+                    seller:sellers(business_name, verification_status)
+                `)
+                .eq('status', 'available')
+                .order('created_at', { ascending: false });
 
-        if (!error) setCars(data || []);
-        setLoading(false);
+            if (error) throw error;
+            setCars(data || []);
+        } catch (error) {
+            console.error('Error fetching cars:', error);
+            setCars([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const getFilteredSorted = () => {
