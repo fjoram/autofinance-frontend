@@ -1441,7 +1441,7 @@ function BuyerDashboard() {
                 .from('loan_applications')
                 .select(`
                     *,
-                    car:cars(car_id, make, model, year, images),
+                    car:cars(car_id, make, model, year, color, mileage, transmission, fuel_type, body_type, location_city, images),
                     bank:banks(bank_name)
                 `)
                 .eq('buyer_id', buyerData.buyer_id)
@@ -1708,14 +1708,16 @@ function BuyerDashboard() {
                                 let inspectionBanner = null;
                                 if (inspStatus === 'scheduled' && inspDate) {
                                     inspectionBanner = (
-                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span>🗓️</span>
-                                            <span style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</span>
+                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+                                            <div style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</div>
                                             {app.inspection_report?.inspector_name && (
-                                                <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
-                                                    — Inspector: {app.inspection_report.inspector_name}
-                                                </span>
+                                                <div style={{ color: '#525252', fontSize: '0.8125rem', marginTop: '0.2rem' }}>
+                                                    Inspector: {app.inspection_report.inspector_name}
+                                                </div>
                                             )}
+                                            <div style={{ fontSize: '0.8125rem', color: '#525252', marginTop: '0.2rem' }}>
+                                                {[app.car?.color, app.car?.mileage ? `${app.car.mileage.toLocaleString()} km` : null, app.car?.transmission, app.car?.fuel_type].filter(Boolean).join(' · ')}
+                                            </div>
                                         </div>
                                     );
                                 } else if (inspStatus === 'passed') {
@@ -2708,9 +2710,17 @@ function ApproveWithInspectionModal({ application, onClose, onApproved }) {
                 </div>
                 <div className="modal-body">
                     <div className="card" style={{ background: '#f0f4ff', marginBottom: '1.5rem' }}>
-                        <strong>{application.car_make} {application.car_model} {application.car_year}</strong>
-                        <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.25rem' }}>
-                            TZS {parseFloat(application.loan_amount || 0).toLocaleString()} · {application.loan_term_months} months
+                        <strong style={{ fontSize: '1rem' }}>{application.car_make} {application.car_model} {application.car_year}</strong>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem 1rem', marginTop: '0.5rem', fontSize: '0.8125rem', color: '#525252' }}>
+                            {application.car?.color && <span><strong>Colour:</strong> {application.car.color}</span>}
+                            {application.car?.mileage && <span><strong>Mileage:</strong> {application.car.mileage.toLocaleString()} km</span>}
+                            {application.car?.transmission && <span><strong>Transmission:</strong> {application.car.transmission}</span>}
+                            {application.car?.fuel_type && <span><strong>Fuel:</strong> {application.car.fuel_type}</span>}
+                            {application.car?.body_type && <span><strong>Body:</strong> {application.car.body_type}</span>}
+                            {application.car?.location_city && <span><strong>Location:</strong> {application.car.location_city}</span>}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#0f62fe', marginTop: '0.5rem', fontWeight: 600 }}>
+                            TZS {parseFloat(application.car_price || 0).toLocaleString()} · Loan: TZS {parseFloat(application.loan_amount || 0).toLocaleString()} · {application.loan_term_months} months
                         </div>
                     </div>
 
@@ -3043,7 +3053,25 @@ function PostApprovalTracker({ application, onUpdate }) {
 
     return (
         <div className="card" style={{ marginTop: '1.5rem' }}>
-            <h4 style={{ marginBottom: '1rem' }}>📋 Post-Approval Checklist</h4>
+            <h4 style={{ marginBottom: '0.75rem' }}>Post-Approval Checklist</h4>
+
+            {/* Car identity block */}
+            <div style={{ background: '#f0f4ff', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.35rem' }}>
+                    {application.car_make} {application.car_model} {application.car_year}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.15rem 1rem', color: '#525252' }}>
+                    {application.car?.color && <span><strong>Colour:</strong> {application.car.color}</span>}
+                    {application.car?.mileage && <span><strong>Mileage:</strong> {application.car.mileage.toLocaleString()} km</span>}
+                    {application.car?.transmission && <span><strong>Transmission:</strong> {application.car.transmission}</span>}
+                    {application.car?.fuel_type && <span><strong>Fuel:</strong> {application.car.fuel_type}</span>}
+                    {application.car?.body_type && <span><strong>Body:</strong> {application.car.body_type}</span>}
+                    {application.car?.location_city && <span><strong>Location:</strong> {application.car.location_city}</span>}
+                </div>
+                <div style={{ marginTop: '0.35rem', color: '#0f62fe', fontWeight: 600 }}>
+                    TZS {parseFloat(application.car_price || 0).toLocaleString()}
+                </div>
+            </div>
 
             {allComplete && (
                 <div style={{ background: '#d1f4e0', border: '1px solid #24a148', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: '#0f6938', fontWeight: 600 }}>
@@ -3414,6 +3442,11 @@ function BankDashboard() {
                         model,
                         year,
                         price,
+                        color,
+                        mileage,
+                        transmission,
+                        fuel_type,
+                        body_type,
                         location_city
                     )
                 `)
@@ -4770,7 +4803,8 @@ function SellerDashboard() {
                     inspection_scheduled_date,
                     inspection_status,
                     inspection_report,
-                    car:cars!car_id(make, model, year),
+                    car_price,
+                    car:cars!car_id(make, model, year, color, mileage, transmission, fuel_type, body_type, location_city),
                     buyer:buyers!buyer_id(
                         user:users!buyers_user_id_fkey(first_name, last_name)
                     )
@@ -4984,18 +5018,28 @@ function SellerDashboard() {
                                                     ? new Date(insp.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
                                                     : 'TBD';
                                                 const inspector = insp.inspection_report?.inspector_name;
+                                                const car = insp.car;
                                                 return (
-                                                    <div key={insp.application_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#f0f6ff', borderRadius: '8px', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                        <div>
-                                                            <strong>{insp.car?.make} {insp.car?.model} {insp.car?.year}</strong>
-                                                            <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.15rem' }}>
-                                                                Buyer: {insp.buyer?.user?.first_name} {insp.buyer?.user?.last_name}
-                                                                {inspector && <span> · Inspector: {inspector}</span>}
+                                                    <div key={insp.application_id} style={{ padding: '0.875rem 1rem', background: '#f0f6ff', borderRadius: '8px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                            <div>
+                                                                <strong>{car?.make} {car?.model} {car?.year}</strong>
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem 0.75rem', fontSize: '0.8125rem', color: '#525252', marginTop: '0.25rem' }}>
+                                                                    {car?.color && <span>Colour: {car.color}</span>}
+                                                                    {car?.mileage && <span>Mileage: {car.mileage.toLocaleString()} km</span>}
+                                                                    {car?.transmission && <span>{car.transmission}</span>}
+                                                                    {car?.fuel_type && <span>{car.fuel_type}</span>}
+                                                                    {car?.location_city && <span>{car.location_city}</span>}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.8125rem', color: '#525252', marginTop: '0.2rem' }}>
+                                                                    Buyer: {insp.buyer?.user?.first_name} {insp.buyer?.user?.last_name}
+                                                                    {inspector && <> · Inspector: {inspector}</>}
+                                                                </div>
                                                             </div>
+                                                            <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                                {dt}
+                                                            </span>
                                                         </div>
-                                                        <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                                            {dt}
-                                                        </span>
                                                     </div>
                                                 );
                                             })}
