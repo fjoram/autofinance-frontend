@@ -62,7 +62,7 @@ function PublicNav() {
                     <img
                         src="/logo.png"
                         alt="AutoFinance - Car Financing Connector"
-                        style={{ height: '44px', width: 'auto', display: 'block' }}
+                        style={{ height: '52px', width: 'auto', display: 'block' }}
                     />
                 </Link>
 
