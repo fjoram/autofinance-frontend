@@ -59,11 +59,11 @@ function PublicNav() {
             }}>
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                    <div style={{ height: '56px', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+                    <div style={{ height: '60px', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
                         <img
                             src="/logo.png"
                             alt="AutoFinance"
-                            style={{ height: '190px', width: 'auto', marginTop: '-8px', display: 'block' }}
+                            style={{ height: '220px', width: 'auto', marginTop: '-8px', display: 'block' }}
                         />
                     </div>
                 </Link>
