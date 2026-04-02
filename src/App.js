@@ -3345,18 +3345,25 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                                 </button>
                                             )}
                                             
-                                            {app.status === 'approved' && 
-                                             app.inspection_status === 'passed' &&
-                                             app.gps_tracker_status === 'installed' &&
-                                             app.logbook_status === 'collected' && (
-                                                <button 
-                                                    className="btn btn-sm btn-primary"
-                                                    onClick={() => setShowDisbursementModal(app)}
-                                                    style={{ background: '#10b981', borderColor: '#10b981' }}
-                                                >
-                                                    💸 Disburse
-                                                </button>
-                                            )}
+                                            {app.status === 'approved' && (() => {
+                                                const inspOk = !app.inspection_required || app.inspection_status === 'passed' || app.inspection_status === 'not_required';
+                                                const gpsOk = app.gps_tracker_installed === true;
+                                                const logbookOk = app.logbook_transferred_to_bank === true;
+                                                const readyToDisburse = inspOk && gpsOk && logbookOk;
+                                                return (
+                                                    <button
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => setShowDisbursementModal(app)}
+                                                        style={{
+                                                            background: readyToDisburse ? '#10b981' : '#f59e0b',
+                                                            borderColor: readyToDisburse ? '#10b981' : '#f59e0b'
+                                                        }}
+                                                        title={readyToDisburse ? 'All checks complete — ready to disburse' : 'Checklist incomplete — disburse anyway?'}
+                                                    >
+                                                        Disburse{!readyToDisburse ? ' *' : ''}
+                                                    </button>
+                                                );
+                                            })()}
                                             
                                             {app.status === 'disbursed' && (
                                                 <div style={{ fontSize: '12px' }}>
