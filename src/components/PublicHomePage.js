@@ -98,7 +98,7 @@ function PublicHomePage() {
             {/* HERO */}
             <section style={{
                 background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
-                padding: '5rem 2rem 6rem',
+                padding: '2.5rem 2rem 3rem',
                 color: 'white',
                 textAlign: 'center',
                 position: 'relative',
@@ -108,7 +108,7 @@ function PublicHomePage() {
                     <div style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '1rem' }}>
                         Tanzania's #1 Auto Finance Platform
                     </div>
-                    <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1.5rem' }}>
+                    <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1rem' }}>
                         Find Your Dream Car.<br />Finance It in Minutes.
                     </h1>
                     <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '2.5rem', maxWidth: '560px', margin: '0 auto 2.5rem' }}>
