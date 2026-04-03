@@ -119,7 +119,7 @@ function PublicHomePage() {
                 display: 'flex',
                 alignItems: 'stretch',
             }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '0 2rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '55% 45%', padding: '0 4rem' }}>
 
                     {/* LEFT — search & headline */}
                     <div style={{ padding: '2.5rem 2rem 2.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
@@ -234,7 +234,7 @@ function PublicHomePage() {
             </section>
 
             {/* WHAT ARE YOU LOOKING FOR — car categories */}
-            <section style={{ background: 'white', padding: '1.75rem 2rem', borderBottom: '1px solid #e0e0e0' }}>
+            <section style={{ background: 'white', padding: '1.75rem 4rem', borderBottom: '1px solid #e0e0e0' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#161616', marginBottom: '1rem' }}>What are you looking for?</h3>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -274,7 +274,7 @@ function PublicHomePage() {
             </section>
 
             {/* FEATURED CARS */}
-            <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 2rem' }}>
+            <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 4rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2rem' }}>
                     <div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>Featured Cars</h2>
@@ -359,7 +359,7 @@ function PublicHomePage() {
             </section>
 
             {/* HOW IT WORKS */}
-            <section style={{ background: 'white', padding: '5rem 2rem' }}>
+            <section style={{ background: 'white', padding: '5rem 4rem' }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>How AutoFinance Works</h2>
@@ -393,7 +393,7 @@ function PublicHomePage() {
             </section>
 
             {/* TRUST INDICATORS */}
-            <section style={{ background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 100%)', padding: '4rem 2rem', color: 'white' }}>
+            <section style={{ background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 100%)', padding: '4rem 4rem', color: 'white' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>
                         Trusted by Thousands of Tanzanians
@@ -417,7 +417,7 @@ function PublicHomePage() {
             </section>
 
             {/* TESTIMONIALS */}
-            <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 2rem' }}>
+            <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 4rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>What Our Customers Say</h2>
                 </div>
@@ -449,7 +449,7 @@ function PublicHomePage() {
             </section>
 
             {/* CTA BANNER */}
-            <section style={{ background: '#f4f4f4', padding: '4rem 2rem', textAlign: 'center' }}>
+            <section style={{ background: '#f4f4f4', padding: '4rem 4rem', textAlign: 'center' }}>
                 <div style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616', marginBottom: '1rem' }}>
                         Ready to Find Your Car?
@@ -475,7 +475,7 @@ function PublicHomePage() {
             </section>
 
             {/* FOOTER */}
-            <footer style={{ background: '#161616', color: '#c6c6c6', padding: '3rem 2rem 2rem' }}>
+            <footer style={{ background: '#161616', color: '#c6c6c6', padding: '3rem 4rem 2rem' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
                         <div>

@@ -42,7 +42,7 @@ function PublicNav() {
     return (
         <nav style={{ position: 'sticky', top: 0, zIndex: 200 }}>
             {/* Portal Strip */}
-            <div style={{ background: '#0f1b35', padding: '0 2rem' }}>
+            <div style={{ background: '#0f1b35', padding: '0 4rem' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
                     {[
                         { icon: '🚗', label: 'Buyer Portal', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#4589ff' },
@@ -76,7 +76,7 @@ function PublicNav() {
         <div style={{
             background: 'white',
             borderBottom: '1px solid #e0e0e0',
-            padding: '0 2rem',
+            padding: '0 4rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
         }}>
             <div style={{
