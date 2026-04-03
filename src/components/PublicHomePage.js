@@ -234,8 +234,8 @@ function PublicHomePage() {
             </section>
 
             {/* WHAT ARE YOU LOOKING FOR — car categories */}
-            <section style={{ background: 'white', padding: '1.75rem 4rem', borderBottom: '1px solid #e0e0e0' }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            <section style={{ background: 'white', borderBottom: '1px solid #e0e0e0' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.75rem 4rem' }}>
                     <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#161616', marginBottom: '1rem' }}>What are you looking for?</h3>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                         {[
