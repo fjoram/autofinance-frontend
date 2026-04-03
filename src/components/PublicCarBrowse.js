@@ -5,11 +5,10 @@ import PublicNav from './PublicNav';
 import './Public.css';
 
 function calcMonthlyEstimate(price) {
-    // Quick estimate: 20% down, 15% annual rate, 48 months
-    const principal = price * 0.8;
+    // 100% financing, 15% annual rate, 60 months (5 years)
     const r = 0.15 / 12;
-    const n = 48;
-    return Math.round(principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
+    const n = 60;
+    return Math.round(price * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
 }
 
 const BODY_TYPES = ['Sedan', 'SUV', 'Truck', 'Van', 'Coupe', 'Hatchback'];
@@ -27,15 +26,18 @@ function PublicCarBrowse() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState(searchParams.get('search') || '');
     const [filters, setFilters] = useState({
-        minPrice: '',
-        maxPrice: '',
-        make: '',
+        minPrice: searchParams.get('minPrice') || '',
+        maxPrice: searchParams.get('maxPrice') || '',
+        make: searchParams.get('make') || '',
+        model: searchParams.get('model') || '',
         location: '',
-        minYear: '',
-        maxYear: '',
-        bodyType: '',
+        minYear: searchParams.get('minYear') || '',
+        maxYear: searchParams.get('maxYear') || '',
+        bodyType: searchParams.get('type') || '',
         condition: '',
-        transmission: ''
+        transmission: '',
+        minMonthly: searchParams.get('minMonthly') || '',
+        maxMonthly: searchParams.get('maxMonthly') || '',
     });
     const [sort, setSort] = useState('newest');
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -84,7 +86,10 @@ function PublicCarBrowse() {
         // Filters
         if (filters.minPrice) result = result.filter(c => c.price >= parseFloat(filters.minPrice));
         if (filters.maxPrice) result = result.filter(c => c.price <= parseFloat(filters.maxPrice));
+        if (filters.minMonthly) result = result.filter(c => calcMonthlyEstimate(c.price) >= parseFloat(filters.minMonthly));
+        if (filters.maxMonthly) result = result.filter(c => calcMonthlyEstimate(c.price) <= parseFloat(filters.maxMonthly));
         if (filters.make) result = result.filter(c => c.make?.toLowerCase().includes(filters.make.toLowerCase()));
+        if (filters.model) result = result.filter(c => c.model?.toLowerCase().includes(filters.model.toLowerCase()));
         if (filters.location) result = result.filter(c =>
             c.location_city?.toLowerCase().includes(filters.location.toLowerCase()) ||
             c.location_region?.toLowerCase().includes(filters.location.toLowerCase())
@@ -267,27 +272,23 @@ function PublicCarBrowse() {
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
                             {filtered.map(car => (
-                                <div
-                                    key={car.car_id}
-                                    onClick={() => navigate(`/cars/${car.car_id}`)}
-                                    style={{
-                                        background: 'white', borderRadius: '8px', overflow: 'hidden',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'pointer',
-                                        transition: 'all 0.25s ease'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
+                                <div key={car.car_id} style={{
+                                    background: 'white', borderRadius: '8px', overflow: 'hidden',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)', transition: 'all 0.25s ease'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
                                 >
                                     {/* Image */}
                                     <div style={{
-                                        width: '100%', height: '190px',
+                                        width: '100%', height: '190px', cursor: 'pointer',
                                         background: car.images?.[0] ? `url(${car.images[0]}) center/cover no-repeat` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: '3.5rem', position: 'relative'
-                                    }}>
+                                    }} onClick={() => navigate(`/cars/${car.car_id}`)}>
                                         {!car.images?.[0] && '🚗'}
                                         {car.is_featured && (
-                                            <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                            <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', background: '#f0a500', color: 'white', padding: '2px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
                                                 ⭐ Featured
                                             </span>
                                         )}
@@ -297,31 +298,53 @@ function PublicCarBrowse() {
                                     </div>
 
                                     {/* Details */}
-                                    <div style={{ padding: '1.125rem' }}>
-                                        <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.375rem', color: '#161616' }}>
+                                    <div style={{ padding: '1rem' }}>
+                                        <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem', color: '#161616', cursor: 'pointer' }}
+                                            onClick={() => navigate(`/cars/${car.car_id}`)}>
                                             {car.year} {car.make} {car.model}
                                         </h3>
-                                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f62fe', marginBottom: '0.625rem' }}>
-                                            TZS {car.price?.toLocaleString()}
+                                        {/* Monthly payment prominent */}
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f0a500' }}>
+                                            TZS {calcMonthlyEstimate(car.price).toLocaleString()}
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#8d8d8d' }}> / per month for 5 years</span>
                                         </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', color: '#6f6f6f', fontSize: '0.8125rem', marginBottom: '0.875rem' }}>
-                                            <span>📍 {car.location_city}</span>
+                                        <div style={{ fontSize: '0.8125rem', color: '#6f6f6f', marginBottom: '0.625rem' }}>
+                                            TZS {car.price?.toLocaleString()} cash
+                                        </div>
+                                        {/* Specs row */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', color: '#6f6f6f', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                                             <span>🏎️ {car.mileage?.toLocaleString()} km</span>
                                             <span>⚙️ {car.transmission}</span>
+                                            <span>⛽ {car.fuel_type}</span>
+                                            <span>📍 {car.location_city}</span>
                                         </div>
-                                        {/* Loan estimate */}
-                                        <div style={{ background: '#f0f4ff', borderRadius: '4px', padding: '0.625rem 0.875rem', fontSize: '0.8125rem' }}>
-                                            <span style={{ color: '#525252' }}>Est. monthly: </span>
-                                            <span style={{ fontWeight: 700, color: '#0f62fe' }}>
-                                                TZS {calcMonthlyEstimate(car.price).toLocaleString()}/mo
-                                            </span>
-                                            <span style={{ color: '#8d8d8d' }}> (20% down, 48mo)</span>
-                                        </div>
-                                        {car.seller?.verification_status === 'approved' && (
-                                            <div style={{ marginTop: '0.625rem', fontSize: '0.75rem', color: '#24a148', fontWeight: 600 }}>
-                                                ✓ Verified Seller
+                                        {/* Seller */}
+                                        {car.seller && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: '#f9f9f9', borderRadius: '4px', marginBottom: '0.75rem' }}>
+                                                <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#0f62fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
+                                                    {(car.seller.business_name || 'S').charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#161616' }}>{car.seller.business_name}</div>
+                                                    {car.seller.verification_status === 'approved' && (
+                                                        <div style={{ fontSize: '0.6875rem', color: '#24a148', fontWeight: 600 }}>✓ Verified Seller</div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
+                                        {/* Action buttons */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                            <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
+                                                background: '#f0a500', color: 'white', border: 'none',
+                                                padding: '0.625rem', borderRadius: '4px', fontWeight: 700,
+                                                fontSize: '0.8125rem', cursor: 'pointer'
+                                            }}>Car Financing</button>
+                                            <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
+                                                background: 'white', color: '#161616', border: '1px solid #e0e0e0',
+                                                padding: '0.625rem', borderRadius: '4px', fontWeight: 600,
+                                                fontSize: '0.8125rem', cursor: 'pointer'
+                                            }}>Cash Purchase</button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
