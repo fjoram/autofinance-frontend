@@ -95,89 +95,124 @@ function PublicHomePage() {
         <div style={{ background: '#f4f4f4', minHeight: '100vh' }}>
             <PublicNav />
 
-            {/* HERO */}
+            {/* HERO — two-column CarDuka style */}
             <section style={{
-                background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
-                padding: '1.25rem 2rem 1.75rem',
-                color: 'white',
-                textAlign: 'center',
-                position: 'relative',
-                overflow: 'hidden'
+                background: 'linear-gradient(135deg, #0f1b35 0%, #0f62fe 100%)',
+                minHeight: '340px',
+                display: 'flex',
+                alignItems: 'stretch',
             }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '0.4rem' }}>
-                        Tanzania's #1 Auto Finance Platform
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '0 2rem' }}>
+
+                    {/* LEFT — search & headline */}
+                    <div style={{ padding: '2.5rem 2rem 2.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500', marginBottom: '0.5rem' }}>
+                            Tanzania's #1 Auto Finance Platform
+                        </div>
+                        <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, lineHeight: 1.2, marginBottom: '0.75rem' }}>
+                            Buy & Sell Cars with<br />Fast &amp; Affordable Financing
+                        </h1>
+                        <p style={{ fontSize: '0.9rem', opacity: 0.85, marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                            Compare loans from Tanzania's top banks and drive away faster.
+                        </p>
+
+                        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', maxWidth: '480px' }}>
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search by make, model, or location..."
+                                style={{
+                                    flex: 1, padding: '0.75rem 1rem', borderRadius: '4px',
+                                    border: 'none', fontSize: '0.9rem', outline: 'none',
+                                }}
+                            />
+                            <button type="submit" style={{
+                                background: '#f0a500', color: 'white', border: 'none',
+                                padding: '0.75rem 1.25rem', borderRadius: '4px',
+                                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', whiteSpace: 'nowrap'
+                            }}>
+                                Search Cars
+                            </button>
+                        </form>
+
+                        <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.8rem', opacity: 0.75 }}>
+                            <span>🚗 Toyota</span><span>🚗 BMW</span><span>🚗 Mercedes</span><span>🚗 Honda</span><span>🚗 Nissan</span>
+                        </div>
                     </div>
-                    <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2.25rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '0.5rem' }}>
-                        Find Your Dream Car.<br />Finance It in Minutes.
-                    </h1>
-                    <p style={{ fontSize: '0.875rem', opacity: 0.9, maxWidth: '500px', margin: '0 auto 0.875rem' }}>
-                        Compare financing from Tanzania's top banks — all in one place.
-                    </p>
 
-                    {/* Search Bar */}
-                    <form onSubmit={handleSearch} style={{ display: 'flex', maxWidth: '600px', margin: '0 auto', gap: '0.5rem' }}>
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by make, model, or location..."
-                            style={{
-                                flex: 1,
-                                padding: '0.75rem 1rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                fontSize: '0.9375rem',
-                                outline: 'none',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                            }}
-                        />
-                        <button type="submit" style={{
-                            background: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: '4px',
-                            fontWeight: 700,
-                            fontSize: '0.9375rem',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
+                    {/* RIGHT — welcome panel */}
+                    <div style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        borderLeft: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '2rem', color: 'white', textAlign: 'center', gap: '1rem'
+                    }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500' }}>Welcome to</div>
+                        <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>AutoFinance</div>
+                        <div style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '220px', lineHeight: 1.6 }}>
+                            Tanzania's trusted marketplace for buying, selling, and financing cars.
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.5rem', width: '100%' }}>
+                            {[
+                                { value: `${stats.cars}+`, label: 'Cars' },
+                                { value: `${stats.banks}+`, label: 'Banks' },
+                                { value: `${stats.applications}+`, label: 'Applications' },
+                            ].map((s, i) => (
+                                <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.75rem 0.5rem' }}>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f0a500' }}>{s.value}</div>
+                                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>{s.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => navigate('/register')} style={{
+                            background: '#f0a500', color: 'white', border: 'none',
+                            padding: '0.75rem 2rem', borderRadius: '4px',
+                            fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', marginTop: '0.25rem'
                         }}>
-                            Search Cars
+                            Get Started Free
                         </button>
-                    </form>
-
-                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', opacity: 0.8, fontSize: '0.8125rem' }}>
-                        <span>🚗 Toyota</span>
-                        <span>🚗 BMW</span>
-                        <span>🚗 Mercedes</span>
-                        <span>🚗 Honda</span>
-                        <span>🚗 Nissan</span>
                     </div>
                 </div>
             </section>
 
-            {/* STATS BAR */}
-            <section style={{ background: 'white', padding: '2rem', borderBottom: '1px solid #e0e0e0' }}>
-                <div style={{
-                    maxWidth: '900px',
-                    margin: '0 auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '2rem',
-                    textAlign: 'center'
-                }}>
-                    {[
-                        { value: `${stats.cars}+`, label: 'Cars Available', icon: '🚗' },
-                        { value: `${stats.banks}+`, label: 'Partner Banks', icon: '🏦' },
-                        { value: `${stats.applications}+`, label: 'Applications Processed', icon: '📋' }
-                    ].map((stat, i) => (
-                        <div key={i}>
-                            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{stat.icon}</div>
-                            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f62fe' }}>{stat.value}</div>
-                            <div style={{ color: '#6f6f6f', fontSize: '0.9375rem', fontWeight: 500 }}>{stat.label}</div>
-                        </div>
-                    ))}
+            {/* WHAT ARE YOU LOOKING FOR — car categories */}
+            <section style={{ background: 'white', padding: '1.75rem 2rem', borderBottom: '1px solid #e0e0e0' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#161616', marginBottom: '1rem' }}>What are you looking for?</h3>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        {[
+                            { icon: '🚙', label: 'SUV' },
+                            { icon: '🚗', label: 'Sedan' },
+                            { icon: '🛻', label: 'Pickup' },
+                            { icon: '🚐', label: 'Minivan' },
+                            { icon: '🏎️', label: 'Sports' },
+                            { icon: '🚌', label: 'Bus' },
+                            { icon: '🚚', label: 'Truck' },
+                            { icon: '⚡', label: 'Electric' },
+                        ].map((cat) => (
+                            <button key={cat.label} onClick={() => navigate(`/cars?type=${cat.label.toLowerCase()}`)} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1.25rem', borderRadius: '20px',
+                                border: '1px solid #e0e0e0', background: 'white',
+                                fontSize: '0.875rem', fontWeight: 600, color: '#161616',
+                                cursor: 'pointer', transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#0f62fe'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#0f62fe'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#161616'; e.currentTarget.style.borderColor = '#e0e0e0'; }}
+                            >
+                                <span>{cat.icon}</span> {cat.label}
+                            </button>
+                        ))}
+                        <button onClick={() => navigate('/cars')} style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.5rem 1.25rem', borderRadius: '20px',
+                            border: '1px solid #f0a500', background: '#f0a500',
+                            fontSize: '0.875rem', fontWeight: 600, color: 'white', cursor: 'pointer',
+                        }}>
+                            View All →
+                        </button>
+                    </div>
                 </div>
             </section>
 
