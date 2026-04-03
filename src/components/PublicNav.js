@@ -40,13 +40,43 @@ function PublicNav() {
     };
 
     return (
-        <nav style={{
+        <nav style={{ position: 'sticky', top: 0, zIndex: 200 }}>
+            {/* Portal Strip */}
+            <div style={{ background: '#0f1b35', padding: '0 2rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
+                    {[
+                        { icon: '🚗', label: 'Buyer Portal', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#4589ff' },
+                        { icon: '🏪', label: 'Seller Portal', path: user?.user_metadata?.user_type === 'seller' ? '/seller-dashboard' : '/login', color: '#42be65' },
+                        { icon: '🏦', label: 'Bank Portal', path: user?.user_metadata?.user_type === 'bank' ? '/bank-dashboard' : '/login', color: '#f0a500' },
+                        { icon: '🔐', label: 'Admin Portal', path: '/admin-dashboard', color: '#be95ff' },
+                    ].map((portal) => (
+                        <Link key={portal.label} to={portal.path} style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                padding: '0.375rem 1rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: 'rgba(255,255,255,0.7)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                borderBottom: '2px solid transparent',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = portal.color; e.currentTarget.style.borderBottomColor = portal.color; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderBottomColor = 'transparent'; }}
+                            >
+                                <span>{portal.icon}</span>{portal.label}
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
+        <div style={{
             background: 'white',
             borderBottom: '1px solid #e0e0e0',
             padding: '0 2rem',
-            position: 'sticky',
-            top: 0,
-            zIndex: 200,
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
         }}>
             <div style={{
@@ -130,58 +160,7 @@ function PublicNav() {
                 )}
             </div>
 
-            {/* Portal Tab Bar */}
-            <div style={{
-                borderTop: '1px solid #e0e0e0',
-                background: '#f8f9ff',
-                padding: '0 2rem',
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    margin: '0 auto',
-                    display: 'flex',
-                    gap: '0',
-                    overflowX: 'auto',
-                }}>
-                    {[
-                        { icon: '🚗', label: 'Buyer Portal', sub: 'Browse & apply for finance', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#0f62fe' },
-                        { icon: '🏪', label: 'Seller Portal', sub: 'List & manage your cars', path: user?.user_metadata?.user_type === 'seller' ? '/seller-dashboard' : '/login', color: '#24a148' },
-                        { icon: '🏦', label: 'Bank Portal', sub: 'Manage loan applications', path: user?.user_metadata?.user_type === 'bank' ? '/bank-dashboard' : '/login', color: '#f0a500' },
-                        { icon: '🔐', label: 'Admin Portal', sub: 'Platform management', path: '/admin-dashboard', color: '#8a3ffc' },
-                    ].map((portal) => (
-                        <Link
-                            key={portal.label}
-                            to={portal.path}
-                            style={{ textDecoration: 'none', flexShrink: 0 }}
-                        >
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 1.25rem',
-                                borderBottom: '2px solid transparent',
-                                transition: 'all 0.2s',
-                                cursor: 'pointer',
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.borderBottomColor = portal.color;
-                                e.currentTarget.style.background = 'white';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.borderBottomColor = 'transparent';
-                                e.currentTarget.style.background = 'transparent';
-                            }}
-                            >
-                                <span style={{ fontSize: '1.1rem' }}>{portal.icon}</span>
-                                <div>
-                                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#161616', whiteSpace: 'nowrap' }}>{portal.label}</div>
-                                    <div style={{ fontSize: '0.6875rem', color: '#8d8d8d', whiteSpace: 'nowrap' }}>{portal.sub}</div>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-            </div>
+        </div>
         </nav>
     );
 }
