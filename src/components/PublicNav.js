@@ -42,8 +42,8 @@ function PublicNav() {
     return (
         <nav style={{ position: 'sticky', top: 0, zIndex: 200 }}>
             {/* Portal Strip */}
-            <div style={{ background: '#0f1b35', padding: '0 4rem' }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
+            <div style={{ background: '#0f1b35' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto', padding: '0 4rem' }}>
                     {[
                         { icon: '🚗', label: 'Buyer Portal', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#4589ff' },
                         { icon: '🏪', label: 'Seller Portal', path: user?.user_metadata?.user_type === 'seller' ? '/seller-dashboard' : '/login', color: '#42be65' },
@@ -76,7 +76,7 @@ function PublicNav() {
         <div style={{
             background: 'white',
             borderBottom: '1px solid #e0e0e0',
-            padding: '0 4rem',
+            padding: '0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
         }}>
             <div style={{
@@ -85,7 +85,8 @@ function PublicNav() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                height: '64px'
+                height: '64px',
+                padding: '0 4rem'
             }}>
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
