@@ -54,6 +54,85 @@ function calcMonthly(price) {
     return Math.round(price * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
 }
 
+const SLIDES = [
+    {
+        bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)',
+        title: 'Drive Your Dream Car',
+        sub: 'Affordable Financing Made Easy',
+        accent: '#f0a500',
+    },
+    {
+        bg: 'linear-gradient(135deg, #0f3460 0%, #533483 60%, #e94560 100%)',
+        title: 'Flexible Auto Loans',
+        sub: 'Fast Approvals, Low Payments',
+        accent: '#fcd116',
+    },
+    {
+        bg: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
+        title: 'Finance Your Journey',
+        sub: 'Get Behind the Wheel Today',
+        accent: '#42be65',
+    },
+];
+
+function HeroSlider() {
+    const [current, setCurrent] = useState(0);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrent(c => (c + 1) % SLIDES.length), 5000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const slide = SLIDES[current];
+
+    return (
+        <div style={{
+            borderRadius: '16px', overflow: 'hidden', position: 'relative',
+            height: '100%', minHeight: '300px',
+            background: slide.bg, transition: 'background 0.8s ease',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '2rem', textAlign: 'center', color: 'white',
+        }}>
+            {/* Decorative circles */}
+            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ position: 'absolute', bottom: '-30px', left: '-30px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+
+            {/* Slide image */}
+            <div style={{
+                width: '100%', height: '160px', borderRadius: '10px', marginBottom: '1rem',
+                background: `url(/hero-slides.png) ${current === 0 ? '16.5%' : current === 1 ? '50%' : '83.5%'} center / auto 100% no-repeat`,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            }} />
+
+            {/* Text */}
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.375rem', letterSpacing: '-0.01em' }}>
+                {slide.title}
+            </div>
+            <div style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '1.25rem' }}>
+                {slide.sub}
+            </div>
+
+            <button onClick={() => navigate('/register')} style={{
+                background: slide.accent, color: '#161616', border: 'none',
+                padding: '0.625rem 1.75rem', borderRadius: '50px',
+                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+            }}>Get Started Free</button>
+
+            {/* Dots */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                {SLIDES.map((_, i) => (
+                    <div key={i} onClick={() => setCurrent(i)} style={{
+                        width: i === current ? '20px' : '8px', height: '8px',
+                        borderRadius: '4px', background: i === current ? slide.accent : 'rgba(255,255,255,0.4)',
+                        cursor: 'pointer', transition: 'all 0.3s ease',
+                    }} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function PublicHomePage() {
     const [featuredCars, setFeaturedCars] = useState([]);
     const [stats, setStats] = useState({ cars: 0, banks: 0, applications: 0 });
@@ -206,37 +285,9 @@ function PublicHomePage() {
                         </form>
                     </div>
 
-                    {/* RIGHT — welcome panel */}
-                    <div style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        borderLeft: '1px solid rgba(255,255,255,0.1)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        padding: '2rem', color: 'white', textAlign: 'center', gap: '1rem'
-                    }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500' }}>Welcome to</div>
-                        <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>AutoFinance</div>
-                        <div style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '220px', lineHeight: 1.6 }}>
-                            Tanzania's trusted marketplace for buying, selling, and financing cars.
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.5rem', width: '100%' }}>
-                            {[
-                                { value: `${stats.cars}+`, label: 'Cars' },
-                                { value: `${stats.banks}+`, label: 'Banks' },
-                                { value: `${stats.applications}+`, label: 'Applications' },
-                            ].map((s, i) => (
-                                <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.75rem 0.5rem' }}>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f0a500' }}>{s.value}</div>
-                                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>{s.label}</div>
-                                </div>
-                            ))}
-                        </div>
-                        <button onClick={() => navigate('/register')} style={{
-                            background: '#f0a500', color: 'white', border: 'none',
-                            padding: '0.75rem 2rem', borderRadius: '4px',
-                            fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', marginTop: '0.25rem'
-                        }}>
-                            Get Started Free
-                        </button>
+                    {/* RIGHT — hero slider */}
+                    <div style={{ padding: '1.5rem 0 1.5rem 1.5rem', display: 'flex', alignItems: 'stretch' }}>
+                        <HeroSlider />
                     </div>
                 </div>
             </section>
