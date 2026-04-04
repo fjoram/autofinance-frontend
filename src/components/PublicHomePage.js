@@ -76,26 +76,19 @@ function HeroSlider() {
             borderRadius: '12px', overflow: 'hidden', position: 'relative',
             width: '100%', background: '#0f1b35',
         }}>
-            {/* Clip white/empty top — show only bottom 55% of the image */}
-            <div style={{ overflow: 'hidden', height: '320px', position: 'relative' }}>
-                <img
-                    key={current}
-                    src={slide.img}
-                    alt="AutoFinance hero"
-                    style={{
-                        width: '100%',
-                        display: 'block',
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: 'auto',
-                        minHeight: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'bottom center',
-                    }}
-                />
-            </div>
+            <img
+                key={current}
+                src={slide.img}
+                alt="AutoFinance hero"
+                style={{
+                    width: '100%', height: '100%',
+                    display: 'block',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                    minHeight: '280px',
+                    transition: 'opacity 0.4s ease',
+                }}
+            />
 
             {/* Dot indicators */}
             <div style={{
