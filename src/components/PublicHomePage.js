@@ -60,9 +60,8 @@ const SLIDES = [
     { img: '/slide3.png', accent: '#42be65' },
 ];
 
-function HeroSlider() {
+function HeroSlider({ height }) {
     const [current, setCurrent] = useState(0);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const timer = setInterval(() => setCurrent(c => (c + 1) % SLIDES.length), 5000);
@@ -73,35 +72,31 @@ function HeroSlider() {
 
     return (
         <div style={{
-            borderRadius: '12px', overflow: 'hidden', position: 'relative',
-            width: '100%', background: '#0f1b35',
+            position: 'relative', width: '100%', height: height || '100%',
+            backgroundImage: `url(${slide.img})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transition: 'background-image 0.5s ease',
         }}>
-            <img
-                key={current}
-                src={slide.img}
-                alt="AutoFinance hero"
-                style={{
-                    width: '100%',
-                    height: '280px',
-                    display: 'block',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
-                    transition: 'opacity 0.4s ease',
-                }}
-            />
+            {/* Subtle bottom gradient so dots are visible */}
+            <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
+                pointerEvents: 'none',
+            }} />
 
             {/* Dot indicators */}
             <div style={{
-                position: 'absolute', bottom: '12px', left: 0, right: 0,
+                position: 'absolute', bottom: '14px', left: 0, right: 0,
                 display: 'flex', justifyContent: 'center', gap: '0.5rem',
             }}>
                 {SLIDES.map((_, i) => (
                     <div key={i} onClick={() => setCurrent(i)} style={{
                         width: i === current ? '24px' : '8px', height: '8px',
                         borderRadius: '4px',
-                        background: i === current ? slide.accent : 'rgba(255,255,255,0.5)',
+                        background: i === current ? slide.accent : 'rgba(255,255,255,0.6)',
                         cursor: 'pointer', transition: 'all 0.3s ease',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
                     }} />
                 ))}
             </div>
@@ -262,10 +257,8 @@ function PublicHomePage() {
                         </form>
                     </div>
 
-                    {/* RIGHT — hero slider */}
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '1.25rem 0', overflow: 'hidden' }}>
-                        <HeroSlider />
-                    </div>
+                    {/* RIGHT — full bleed slider, image IS the panel */}
+                    <HeroSlider height="100%" />
                 </div>
             </section>
 
