@@ -133,67 +133,75 @@ function PublicHomePage() {
                             Compare loans from Tanzania's top banks and drive away faster.
                         </p>
 
-                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '8px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '460px' }}>
+                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '460px' }}>
 
-                            {/* Make + Model */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                <select value={heroFilters.make} onChange={e => setHeroFilters({...heroFilters, make: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', color: '#161616' }}>
-                                    <option value="">Make</option>
-                                    {MAKES.map(m => <option key={m} value={m}>{m}</option>)}
-                                </select>
-                                <input type="text" placeholder="Model" value={heroFilters.model}
-                                    onChange={e => setHeroFilters({...heroFilters, model: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem' }} />
-                            </div>
-
-                            {/* Year range */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                <input type="number" placeholder="Min Year" value={heroFilters.minYear}
-                                    onChange={e => setHeroFilters({...heroFilters, minYear: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem' }} />
-                                <input type="number" placeholder="Max Year" value={heroFilters.maxYear}
-                                    onChange={e => setHeroFilters({...heroFilters, maxYear: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem' }} />
-                            </div>
-
-                            {/* Monthly payment toggle */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '4px', padding: '0.5rem 0.75rem' }}>
-                                <div>
-                                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#161616' }}>Show Monthly Payment</div>
-                                    <div style={{ fontSize: '0.7rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
-                                </div>
-                                <div onClick={() => setShowMonthly(!showMonthly)} style={{
-                                    width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
-                                    background: showMonthly ? '#f0a500' : '#e0e0e0', position: 'relative', transition: 'background 0.2s'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute', top: '3px', left: showMonthly ? '23px' : '3px',
-                                        width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                                        transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                    }} />
+                            {/* Brand & Model */}
+                            <div>
+                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Brand &amp; Model</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                    <select value={heroFilters.make} onChange={e => setHeroFilters({...heroFilters, make: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.875rem', color: '#161616', background: 'white' }}>
+                                        <option value="">Make</option>
+                                        {MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                    <select value={heroFilters.model} onChange={e => setHeroFilters({...heroFilters, model: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.875rem', color: '#161616', background: 'white' }}>
+                                        <option value="">Model</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            {/* Price / Monthly range */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                <input type="number" placeholder={showMonthly ? 'Min Monthly (TZS)' : 'Min Price (TZS)'}
-                                    value={heroFilters.minVal} onChange={e => setHeroFilters({...heroFilters, minVal: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem' }} />
-                                <input type="number" placeholder={showMonthly ? 'Max Monthly (TZS)' : 'Max Price (TZS)'}
-                                    value={heroFilters.maxVal} onChange={e => setHeroFilters({...heroFilters, maxVal: e.target.value})}
-                                    style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem' }} />
+                            {/* Year of Manufacture */}
+                            <div>
+                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Year of Manufacture</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                    <input type="number" placeholder="Min Year of Manufacture" value={heroFilters.minYear}
+                                        onChange={e => setHeroFilters({...heroFilters, minYear: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                    <input type="number" placeholder="Max Year of Manufacture" value={heroFilters.maxYear}
+                                        onChange={e => setHeroFilters({...heroFilters, maxYear: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                </div>
+                            </div>
+
+                            {/* Price in TZS */}
+                            <div>
+                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Price in TZS</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '6px', padding: '0.5rem 0.75rem', marginBottom: '0.5rem' }}>
+                                    <div>
+                                        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f0a500' }}>Show Monthly Payment</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
+                                    </div>
+                                    <div onClick={() => setShowMonthly(!showMonthly)} style={{
+                                        width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
+                                        background: showMonthly ? '#f0a500' : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute', top: '3px', left: showMonthly ? '23px' : '3px',
+                                            width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                        }} />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Min Price' : 'Min Price (TZS)'}
+                                        value={heroFilters.minVal} onChange={e => setHeroFilters({...heroFilters, minVal: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Max Price' : 'Max Price (TZS)'}
+                                        value={heroFilters.maxVal} onChange={e => setHeroFilters({...heroFilters, maxVal: e.target.value})}
+                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                </div>
                             </div>
 
                             <button type="submit" style={{
                                 background: '#f0a500', color: 'white', border: 'none',
-                                padding: '0.75rem', borderRadius: '4px', fontWeight: 700,
-                                fontSize: '0.9375rem', cursor: 'pointer', width: '100%'
+                                padding: '0.875rem', borderRadius: '50px', fontWeight: 700,
+                                fontSize: '1rem', cursor: 'pointer', width: '100%'
                             }}>Search Filtered Cars</button>
                             <button type="button" onClick={() => navigate('/cars')} style={{
                                 background: '#0f1b35', color: 'white', border: 'none',
-                                padding: '0.75rem', borderRadius: '4px', fontWeight: 600,
-                                fontSize: '0.875rem', cursor: 'pointer', width: '100%'
+                                padding: '0.875rem', borderRadius: '50px', fontWeight: 600,
+                                fontSize: '0.9375rem', cursor: 'pointer', width: '100%'
                             }}>View All Cars</button>
                         </form>
                     </div>
