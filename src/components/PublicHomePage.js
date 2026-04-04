@@ -55,33 +55,9 @@ function calcMonthly(price) {
 }
 
 const SLIDES = [
-    {
-        bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)',
-        icon: '🚗',
-        iconBg: 'rgba(240,165,0,0.15)',
-        title: 'Drive Your Dream Car',
-        sub: 'Affordable Financing Made Easy',
-        accent: '#f0a500',
-        stats: [{ v: '500+', l: 'Cars' }, { v: '8+', l: 'Banks' }, { v: '48hr', l: 'Approval' }],
-    },
-    {
-        bg: 'linear-gradient(135deg, #0d3b2e 0%, #145a3c 60%, #1eb53a 100%)',
-        icon: '💳',
-        iconBg: 'rgba(252,209,22,0.15)',
-        title: 'Flexible Auto Loans',
-        sub: 'Fast Approvals, Low Payments',
-        accent: '#fcd116',
-        stats: [{ v: '0.5%', l: 'Platform Fee' }, { v: '60mo', l: 'Max Term' }, { v: '100%', l: 'Financing' }],
-    },
-    {
-        bg: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
-        icon: '🏦',
-        iconBg: 'rgba(66,190,101,0.15)',
-        title: 'Finance Your Journey',
-        sub: 'Compare Tanzania\'s Top Banks',
-        accent: '#42be65',
-        stats: [{ v: '3 Steps', l: 'Simple Process' }, { v: 'TZS', l: 'Local Currency' }, { v: '✓', l: 'Verified Sellers' }],
-    },
+    { img: '/slide1.png', accent: '#f0a500' },
+    { img: '/slide2.png', accent: '#fcd116' },
+    { img: '/slide3.png', accent: '#42be65' },
 ];
 
 function HeroSlider() {
@@ -98,61 +74,35 @@ function HeroSlider() {
     return (
         <div style={{
             borderRadius: '16px', overflow: 'hidden', position: 'relative',
-            width: '100%', background: slide.bg, transition: 'background 1s ease',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '2.5rem 2rem', textAlign: 'center', color: 'white',
+            width: '100%', background: '#0f1b35',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
         }}>
-            {/* Decorative bg circles */}
-            <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+            {/* Slide image — positioned to show bottom (actual content), crop white top */}
+            <img
+                src={slide.img}
+                alt="AutoFinance hero"
+                style={{
+                    width: '100%',
+                    display: 'block',
+                    objectFit: 'cover',
+                    objectPosition: 'bottom center',
+                    maxHeight: '340px',
+                    transition: 'opacity 0.5s ease',
+                }}
+            />
 
-            {/* Icon */}
+            {/* Dot indicators */}
             <div style={{
-                width: '80px', height: '80px', borderRadius: '50%',
-                background: slide.iconBg, border: `2px solid ${slide.accent}40`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '2.5rem', marginBottom: '1.25rem',
-                boxShadow: `0 0 30px ${slide.accent}30`,
+                position: 'absolute', bottom: '12px', left: 0, right: 0,
+                display: 'flex', justifyContent: 'center', gap: '0.5rem',
             }}>
-                {slide.icon}
-            </div>
-
-            {/* Title */}
-            <div style={{ fontSize: '1.375rem', fontWeight: 900, marginBottom: '0.375rem', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                {slide.title}
-            </div>
-            <div style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1.5rem' }}>
-                {slide.sub}
-            </div>
-
-            {/* Mini stats */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', width: '100%', justifyContent: 'center' }}>
-                {slide.stats.map((s, i) => (
-                    <div key={i} style={{
-                        background: 'rgba(255,255,255,0.08)', borderRadius: '8px',
-                        padding: '0.625rem 0.875rem', flex: 1,
-                        border: '1px solid rgba(255,255,255,0.1)',
-                    }}>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: slide.accent }}>{s.v}</div>
-                        <div style={{ fontSize: '0.6875rem', opacity: 0.75 }}>{s.l}</div>
-                    </div>
-                ))}
-            </div>
-
-            <button onClick={() => navigate('/register')} style={{
-                background: slide.accent, color: '#161616', border: 'none',
-                padding: '0.75rem 2rem', borderRadius: '50px',
-                fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                boxShadow: `0 4px 16px ${slide.accent}50`,
-            }}>Get Started Free</button>
-
-            {/* Dots */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
                 {SLIDES.map((_, i) => (
                     <div key={i} onClick={() => setCurrent(i)} style={{
                         width: i === current ? '24px' : '8px', height: '8px',
-                        borderRadius: '4px', background: i === current ? slide.accent : 'rgba(255,255,255,0.35)',
+                        borderRadius: '4px',
+                        background: i === current ? slide.accent : 'rgba(255,255,255,0.5)',
                         cursor: 'pointer', transition: 'all 0.3s ease',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
                     }} />
                 ))}
             </div>
