@@ -7,7 +7,17 @@
 .pub-nav-links {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
+}
+
+.pub-nav-portals {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.pub-nav-divider {
+    display: block;
 }
 
 .pub-nav-actions {
@@ -210,6 +220,14 @@
 /* ============================================
    TABLET  (768px – 1024px)
    ============================================ */
+@media (max-width: 1100px) {
+    /* Hide portal links on smaller screens — still in mobile menu */
+    .pub-nav-portals,
+    .pub-nav-divider {
+        display: none;
+    }
+}
+
 @media (max-width: 1024px) {
     .pub-details-layout {
         grid-template-columns: 1fr 320px;
@@ -234,7 +252,9 @@
 
     /* Nav */
     .pub-nav-links,
-    .pub-nav-actions {
+    .pub-nav-actions,
+    .pub-nav-portals,
+    .pub-nav-divider {
         display: none;
     }
 
