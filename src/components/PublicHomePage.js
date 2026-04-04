@@ -174,7 +174,7 @@ function PublicHomePage() {
                 display: 'flex',
                 alignItems: 'stretch',
             }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '55% 45%', padding: '0 4rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '0 4rem' }}>
 
                     {/* LEFT — search & headline */}
                     <div style={{ padding: '2.5rem 2rem 2.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
