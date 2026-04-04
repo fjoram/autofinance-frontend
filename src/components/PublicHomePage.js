@@ -81,11 +81,11 @@ function HeroSlider() {
                 src={slide.img}
                 alt="AutoFinance hero"
                 style={{
-                    width: '100%', height: '100%',
+                    width: '100%',
+                    height: '280px',
                     display: 'block',
                     objectFit: 'cover',
                     objectPosition: 'center',
-                    minHeight: '280px',
                     transition: 'opacity 0.4s ease',
                 }}
             />
@@ -170,9 +170,10 @@ function PublicHomePage() {
             {/* HERO — two-column CarDuka style */}
             <section style={{
                 background: 'linear-gradient(135deg, #0f1b35 0%, #0f62fe 100%)',
-                minHeight: '340px',
+                height: '360px',
                 display: 'flex',
                 alignItems: 'stretch',
+                overflow: 'hidden',
             }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '0 4rem' }}>
 
@@ -262,7 +263,7 @@ function PublicHomePage() {
                     </div>
 
                     {/* RIGHT — hero slider */}
-                    <div style={{ display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '1.25rem 0', overflow: 'hidden' }}>
                         <HeroSlider />
                     </div>
                 </div>
