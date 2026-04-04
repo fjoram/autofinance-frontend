@@ -73,23 +73,29 @@ function HeroSlider() {
 
     return (
         <div style={{
-            borderRadius: '16px', overflow: 'hidden', position: 'relative',
+            borderRadius: '12px', overflow: 'hidden', position: 'relative',
             width: '100%', background: '#0f1b35',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
         }}>
-            {/* Slide image — positioned to show bottom (actual content), crop white top */}
-            <img
-                src={slide.img}
-                alt="AutoFinance hero"
-                style={{
-                    width: '100%',
-                    display: 'block',
-                    objectFit: 'cover',
-                    objectPosition: 'bottom center',
-                    maxHeight: '340px',
-                    transition: 'opacity 0.5s ease',
-                }}
-            />
+            {/* Clip white/empty top — show only bottom 55% of the image */}
+            <div style={{ overflow: 'hidden', height: '320px', position: 'relative' }}>
+                <img
+                    key={current}
+                    src={slide.img}
+                    alt="AutoFinance hero"
+                    style={{
+                        width: '100%',
+                        display: 'block',
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 'auto',
+                        minHeight: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'bottom center',
+                    }}
+                />
+            </div>
 
             {/* Dot indicators */}
             <div style={{
@@ -263,7 +269,7 @@ function PublicHomePage() {
                     </div>
 
                     {/* RIGHT — hero slider */}
-                    <div style={{ padding: '1.5rem 0 1.5rem 1.5rem', display: 'flex', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
                         <HeroSlider />
                     </div>
                 </div>
