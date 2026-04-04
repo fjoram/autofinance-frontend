@@ -6,6 +6,7 @@ import './Public.css';
 function PublicNav() {
     const [user, setUser] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [howToOpen, setHowToOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -71,9 +72,49 @@ function PublicNav() {
 
                 {/* Main links */}
                 <div className="pub-nav-links" style={{ marginRight: '0.5rem' }}>
-                    <Link to="/cars" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.875rem' }}>Browse Cars</Link>
-                    <Link to="/how-it-works" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.875rem' }}>How It Works</Link>
-                    <Link to="/about" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.875rem' }}>About</Link>
+                    {/* How To dropdown */}
+                    <div style={{ position: 'relative' }}
+                        onMouseEnter={() => setHowToOpen(true)}
+                        onMouseLeave={() => setHowToOpen(false)}
+                    >
+                        <span style={{
+                            color: '#525252', fontWeight: 500, fontSize: '0.875rem',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            How To <span style={{ fontSize: '0.625rem' }}>▾</span>
+                        </span>
+                        {howToOpen && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0,
+                                background: 'white', borderRadius: '6px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                border: '1px solid #e0e0e0',
+                                minWidth: '200px', zIndex: 300,
+                                padding: '0.5rem 0',
+                                marginTop: '0.5rem'
+                            }}>
+                                {[
+                                    { label: 'How It Works', path: '/how-it-works' },
+                                    { label: 'For Buyers', path: '/how-it-works#buyers' },
+                                    { label: 'For Sellers', path: '/how-it-works#sellers' },
+                                    { label: 'For Banks', path: '/how-it-works#banks' },
+                                ].map(item => (
+                                    <Link key={item.label} to={item.path} style={{ textDecoration: 'none' }}>
+                                        <div style={{
+                                            padding: '0.625rem 1.25rem',
+                                            fontSize: '0.875rem', color: '#161616', fontWeight: 500,
+                                            transition: 'background 0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f4f4f4'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >{item.label}</div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <Link to="/about" style={{ textDecoration: 'none', color: '#525252', fontWeight: 500, fontSize: '0.875rem', whiteSpace: 'nowrap' }}>About</Link>
                 </div>
 
                 {/* Divider */}
@@ -133,8 +174,10 @@ function PublicNav() {
 
             {/* Mobile Dropdown */}
             <div className={`pub-mobile-menu ${menuOpen ? 'open' : ''}`}>
-                <a onClick={() => handleNav('/cars')} style={{ cursor: 'pointer' }}>Browse Cars</a>
                 <a onClick={() => handleNav('/how-it-works')} style={{ cursor: 'pointer' }}>How It Works</a>
+                <a onClick={() => handleNav('/how-it-works#buyers')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Buyers</a>
+                <a onClick={() => handleNav('/how-it-works#sellers')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Sellers</a>
+                <a onClick={() => handleNav('/how-it-works#banks')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Banks</a>
                 <a onClick={() => handleNav('/about')} style={{ cursor: 'pointer' }}>About</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Buyer Portal</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Seller Portal</a>
