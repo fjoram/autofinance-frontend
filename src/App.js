@@ -427,6 +427,39 @@ function AdminSidebar({ activeView, onNavigate }) {
                     <span style={{ fontSize: '18px' }}>⚙️</span>
                     <span>Settings</span>
                 </button>
+
+                <button
+                    onClick={() => onNavigate('slider')}
+                    style={{
+                        width: '100%',
+                        padding: '0.875rem 1.5rem',
+                        border: 'none',
+                        background: activeView === 'slider' ? '#f3f4f6' : 'transparent',
+                        borderLeft: activeView === 'slider' ? '3px solid #667eea' : '3px solid transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '14px',
+                        fontWeight: activeView === 'slider' ? '600' : '400',
+                        color: activeView === 'slider' ? '#667eea' : '#6c757d',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (activeView !== 'slider') {
+                            e.target.style.background = '#f8f9fa';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (activeView !== 'slider') {
+                            e.target.style.background = 'transparent';
+                        }
+                    }}
+                >
+                    <span style={{ fontSize: '18px' }}>🖼️</span>
+                    <span>Hero Slider</span>
+                </button>
             </nav>
         </div>
     );
@@ -1770,6 +1803,141 @@ function AdminAnalyticsView() {
 }
 
 
+// Admin: Hero Slider View
+function AdminSliderView() {
+    const [slides, setSlides] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [form, setForm] = useState({ title: '', subtitle: '', accent: '#f0a500' });
+    const [imageFile, setImageFile] = useState(null);
+    const [msg, setMsg] = useState('');
+
+    useEffect(() => { fetchSlides(); }, []);
+
+    const fetchSlides = async () => {
+        setLoading(true);
+        const { data } = await supabase.from('hero_slides').select('*').order('sort_order');
+        setSlides(data || []);
+        setLoading(false);
+    };
+
+    const handleUpload = async (e) => {
+        e.preventDefault();
+        if (!imageFile) { setMsg('Please select an image file.'); return; }
+        setUploading(true);
+        setMsg('');
+        const ext = imageFile.name.split('.').pop();
+        const fileName = `slide_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('slider-images').upload(fileName, imageFile);
+        if (upErr) { setMsg('Upload failed: ' + upErr.message); setUploading(false); return; }
+        const { data: { publicUrl } } = supabase.storage.from('slider-images').getPublicUrl(fileName);
+        const nextOrder = slides.length > 0 ? Math.max(...slides.map(s => s.sort_order)) + 1 : 1;
+        const { error: dbErr } = await supabase.from('hero_slides').insert({
+            image_url: publicUrl,
+            title: form.title || null,
+            subtitle: form.subtitle || null,
+            accent: form.accent,
+            sort_order: nextOrder,
+        });
+        if (dbErr) { setMsg('DB error: ' + dbErr.message); } else {
+            setMsg('Slide added successfully!');
+            setForm({ title: '', subtitle: '', accent: '#f0a500' });
+            setImageFile(null);
+            e.target.reset();
+            fetchSlides();
+        }
+        setUploading(false);
+    };
+
+    const handleDelete = async (slide) => {
+        if (!window.confirm('Delete this slide?')) return;
+        // Delete from storage if it's a Supabase URL
+        if (slide.image_url.includes('slider-images')) {
+            const path = slide.image_url.split('/slider-images/')[1];
+            await supabase.storage.from('slider-images').remove([path]);
+        }
+        await supabase.from('hero_slides').delete().eq('id', slide.id);
+        fetchSlides();
+    };
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Hero Slider</h2>
+            <p style={{ color: '#6c757d', marginBottom: '2rem', fontSize: '0.875rem' }}>
+                Manage the homepage sliding images. Max recommended: 5 slides.
+            </p>
+
+            {/* Current Slides */}
+            <div style={{ marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Current Slides ({slides.length})</h3>
+                {loading ? <p style={{ color: '#6c757d' }}>Loading...</p> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {slides.map((slide, i) => (
+                            <div key={slide.id} style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                                <div style={{
+                                    height: '160px', backgroundImage: `url(${slide.image_url})`,
+                                    backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative'
+                                }}>
+                                    <span style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        #{i + 1}
+                                    </span>
+                                </div>
+                                <div style={{ padding: '0.75rem' }}>
+                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#161616', marginBottom: '0.25rem' }}>
+                                        {slide.title || <span style={{ color: '#aaa', fontStyle: 'italic' }}>No title</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#6c757d', marginBottom: '0.75rem' }}>
+                                        {slide.subtitle || '—'}
+                                    </div>
+                                    <button onClick={() => handleDelete(slide)} style={{
+                                        background: '#da1e28', color: 'white', border: 'none',
+                                        padding: '0.375rem 0.875rem', borderRadius: '4px',
+                                        fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', width: '100%'
+                                    }}>Delete Slide</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Add New Slide */}
+            <div style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem' }}>Add New Slide</h3>
+                <form onSubmit={handleUpload}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Image File *</label>
+                        <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} required
+                            style={{ fontSize: '0.875rem', width: '100%' }} />
+                        <div style={{ fontSize: '0.75rem', color: '#8d8d8d', marginTop: '0.25rem' }}>Recommended: 700 × 488px landscape</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Title</label>
+                            <input type="text" placeholder="e.g. Drive Your Dream Car Today" value={form.title}
+                                onChange={e => setForm({ ...form, title: e.target.value })}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Subtitle</label>
+                            <input type="text" placeholder="e.g. Low rates · Quick approvals" value={form.subtitle}
+                                onChange={e => setForm({ ...form, subtitle: e.target.value })}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                        </div>
+                    </div>
+                    {msg && <div style={{ padding: '0.625rem 1rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.875rem', background: msg.includes('success') ? '#defbe6' : '#fff1f1', color: msg.includes('success') ? '#0e6027' : '#da1e28' }}>{msg}</div>}
+                    <button type="submit" disabled={uploading} style={{
+                        background: '#667eea', color: 'white', border: 'none',
+                        padding: '0.625rem 1.5rem', borderRadius: '4px',
+                        fontWeight: 600, fontSize: '0.9375rem', cursor: uploading ? 'not-allowed' : 'pointer',
+                        opacity: uploading ? 0.7 : 1
+                    }}>{uploading ? 'Uploading...' : 'Add Slide'}</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // Admin: Settings View
 function AdminSettingsView() {
     const [adminUsers, setAdminUsers] = useState([]);
@@ -1939,6 +2107,7 @@ function AdminDashboard() {
                 {view === 'revenue' && <AdminRevenueView />}
                 {view === 'analytics' && <AdminAnalyticsView />}
                 {view === 'settings' && <AdminSettingsView />}
+                {view === 'slider' && <AdminSliderView />}
             </div>
         </>
     );

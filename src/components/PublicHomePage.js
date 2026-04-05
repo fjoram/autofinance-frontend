@@ -54,26 +54,29 @@ function calcMonthly(price) {
     return Math.round(price * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
 }
 
-const SLIDES = [
-    { img: '/slide1.png', accent: '#f0a500', title: 'Finance Your Car, Grow Your Business', subtitle: 'Low rates · Quick approvals · Flexible terms' },
-    { img: '/slide2.png', accent: '#fcd116', title: 'Drive Your Dream Car Today', subtitle: 'Fast approvals · 100% financing · Tanzania-wide' },
-    { img: '/slide3.png', accent: '#42be65', title: 'Farm Vehicle Financing Made Easy', subtitle: 'Tractors, pickups & more · Flexible repayment plans' },
-];
-
 function HeroSlider({ height }) {
+    const [slides, setSlides] = useState([]);
     const [current, setCurrent] = useState(0);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrent(c => (c + 1) % SLIDES.length), 5000);
-        return () => clearInterval(timer);
+        supabase.from('hero_slides').select('*').eq('is_active', true).order('sort_order')
+            .then(({ data }) => { if (data && data.length > 0) setSlides(data); });
     }, []);
 
-    const slide = SLIDES[current];
+    useEffect(() => {
+        if (slides.length === 0) return;
+        const timer = setInterval(() => setCurrent(c => (c + 1) % slides.length), 5000);
+        return () => clearInterval(timer);
+    }, [slides.length]);
+
+    if (slides.length === 0) return <div style={{ width: '100%', height: height || '488px', borderRadius: '12px', background: '#1a3a6b' }} />;
+
+    const slide = slides[current];
 
     return (
         <div style={{
             position: 'relative', width: '100%', height: height || '100%',
-            backgroundImage: `url(${slide.img})`,
+            backgroundImage: `url(${slide.image_url})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             transition: 'background-image 0.5s ease',
@@ -108,11 +111,11 @@ function HeroSlider({ height }) {
                 position: 'absolute', bottom: '14px', left: 0, right: 0,
                 display: 'flex', justifyContent: 'center', gap: '0.5rem',
             }}>
-                {SLIDES.map((_, i) => (
+                {slides.map((_, i) => (
                     <div key={i} onClick={() => setCurrent(i)} style={{
                         width: i === current ? '24px' : '8px', height: '8px',
                         borderRadius: '4px',
-                        background: i === current ? slide.accent : 'rgba(255,255,255,0.6)',
+                        background: i === current ? (slide.accent || '#f0a500') : 'rgba(255,255,255,0.6)',
                         cursor: 'pointer', transition: 'all 0.3s ease',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
                     }} />
