@@ -9,6 +9,9 @@ import PublicCarDetails from './components/PublicCarDetails';
 import { HowItWorksPage, AboutPage } from './components/PublicInfoPages';
 import './App.css';
 
+// Platform configuration
+const PLATFORM_FEE_RATE = 0.005; // 0.5% of loan amount charged to bank/deducted from disbursement
+
 // Mock Data
 const MOCK_CARS = [
     {
@@ -424,13 +427,46 @@ function AdminSidebar({ activeView, onNavigate }) {
                     <span style={{ fontSize: '18px' }}>⚙️</span>
                     <span>Settings</span>
                 </button>
+
+                <button
+                    onClick={() => onNavigate('slider')}
+                    style={{
+                        width: '100%',
+                        padding: '0.875rem 1.5rem',
+                        border: 'none',
+                        background: activeView === 'slider' ? '#f3f4f6' : 'transparent',
+                        borderLeft: activeView === 'slider' ? '3px solid #667eea' : '3px solid transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '14px',
+                        fontWeight: activeView === 'slider' ? '600' : '400',
+                        color: activeView === 'slider' ? '#667eea' : '#6c757d',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (activeView !== 'slider') {
+                            e.target.style.background = '#f8f9fa';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (activeView !== 'slider') {
+                            e.target.style.background = 'transparent';
+                        }
+                    }}
+                >
+                    <span style={{ fontSize: '18px' }}>🖼️</span>
+                    <span>Hero Slider</span>
+                </button>
             </nav>
         </div>
     );
 }
 
 // AdminOverview Component - Dashboard Homepage
-function AdminOverview() {
+function AdminOverview({ onNavigate }) {
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalBuyers: 0,
@@ -487,9 +523,21 @@ function AdminOverview() {
                 .select('*', { count: 'exact', head: true })
                 .eq('verification_status', 'pending');
 
-            // Calculate revenue (this will be updated when commission system is added)
-            const totalRevenue = 0; // Placeholder
-            const monthlyRevenue = 0; // Placeholder
+            // Calculate revenue from disbursed applications
+            const { data: disbursedApps } = await supabase
+                .from('loan_applications')
+                .select('platform_fee_amount, loan_amount, disbursement_date')
+                .eq('status', 'disbursed');
+
+            const now = new Date();
+            const thisMonth = now.getMonth();
+            const thisYear = now.getFullYear();
+
+            const totalRevenue = disbursedApps?.reduce((s, a) => s + parseFloat(a.platform_fee_amount || parseFloat(a.loan_amount || 0) * PLATFORM_FEE_RATE), 0) || 0;
+            const monthlyRevenue = disbursedApps?.filter(a => {
+                const d = new Date(a.disbursement_date);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            }).reduce((s, a) => s + parseFloat(a.platform_fee_amount || parseFloat(a.loan_amount || 0) * PLATFORM_FEE_RATE), 0) || 0;
 
             setStats({
                 totalUsers: (buyersCount || 0) + (sellersCount || 0) + (banksCount || 0),
@@ -587,6 +635,18 @@ function AdminOverview() {
                     </div>
                     <div className="stat-change">Sellers awaiting approval</div>
                 </div>
+
+                <div className="stat-card">
+                    <div className="stat-label">Platform Revenue</div>
+                    <div className="stat-value">{(stats.totalRevenue / 1000).toFixed(0)}K</div>
+                    <div className="stat-change">TZS earned</div>
+                </div>
+
+                <div className="stat-card">
+                    <div className="stat-label">This Month</div>
+                    <div className="stat-value">{(stats.monthlyRevenue / 1000).toFixed(0)}K</div>
+                    <div className="stat-change">TZS revenue</div>
+                </div>
             </div>
 
             {/* Alerts Section */}
@@ -604,7 +664,7 @@ function AdminOverview() {
                     </p>
                     <button
                         className="btn btn-primary"
-                        onClick={() => window.location.hash = '#seller-verification'}
+                        onClick={() => onNavigate('seller-verification')}
                         style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
                     >
                         Review Sellers →
@@ -775,7 +835,7 @@ function SellerVerification() {
             fetchSellers();
         } catch (error) {
             console.error('Error approving seller:', error);
-            alert('❌ Error approving seller: ' + error.message);
+            alert('❌ Error approving seller: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -816,7 +876,7 @@ function SellerVerification() {
             fetchSellers();
         } catch (error) {
             console.error('Error rejecting seller:', error);
-            alert('❌ Error rejecting seller: ' + error.message);
+            alert('❌ Error rejecting seller: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -1169,6 +1229,814 @@ function SellerVerification() {
 }
 
 
+// Admin: User Management View
+function AdminUsersView() {
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const [{ data: buyers }, { data: sellers }, { data: banks }] = await Promise.all([
+                supabase.from('buyers').select('buyer_id, user:users!buyers_user_id_fkey(first_name, last_name, email, phone, created_at)'),
+                supabase.from('sellers').select('seller_id, business_name, verification_status, user:users!sellers_user_id_fkey(first_name, last_name, email, phone, created_at)'),
+                supabase.from('banks').select('bank_id, bank_name, user:users!banks_user_id_fkey(first_name, last_name, email, phone, created_at)')
+            ]);
+
+            const combined = [
+                ...(buyers || []).map(b => ({ ...b, type: 'buyer', name: `${b.user?.first_name || ''} ${b.user?.last_name || ''}`.trim(), email: b.user?.email, phone: b.user?.phone, created_at: b.user?.created_at })),
+                ...(sellers || []).map(s => ({ ...s, type: 'seller', name: s.business_name || `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim(), email: s.user?.email, phone: s.user?.phone, created_at: s.user?.created_at })),
+                ...(banks || []).map(bk => ({ ...bk, type: 'bank', name: bk.bank_name || `${bk.user?.first_name || ''} ${bk.user?.last_name || ''}`.trim(), email: bk.user?.email, phone: bk.user?.phone, created_at: bk.user?.created_at }))
+            ];
+            combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            setUsers(combined);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filtered = filter === 'all' ? users : users.filter(u => u.type === filter);
+
+    const badgeClass = (type) => type === 'buyer' ? 'badge-success' : type === 'seller' ? 'badge-warning' : 'badge-danger';
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">User Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>View all registered users across the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {['all', 'buyer', 'seller', 'bank'].map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}{f === 'all' ? 's' : 's'}
+                            {f !== 'all' && ` (${users.filter(u => u.type === f).length})`}
+                            {f === 'all' && ` (${users.length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading users...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Type</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="5" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No users found</td></tr>
+                                ) : filtered.map((u, i) => (
+                                    <tr key={i}>
+                                        <td>{u.name || '—'}</td>
+                                        <td>{u.email || '—'}</td>
+                                        <td>{u.phone || '—'}</td>
+                                        <td><span className={`badge ${badgeClass(u.type)}`}>{u.type}</span></td>
+                                        <td>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Car Listings View
+function AdminCarsView() {
+    const [cars, setCars] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchCars();
+    }, []);
+
+    const fetchCars = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('cars')
+                .select('car_id, make, model, year, price, status, location, listed_at, created_at, seller:sellers(business_name)')
+                .order('created_at', { ascending: false });
+            setCars(data || []);
+        } catch (error) {
+            console.error('Error fetching cars:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const statusBadge = (status) => {
+        const map = { available: 'badge-success', reserved: 'badge-warning', sold: 'badge-danger', draft: '' };
+        return map[status] || '';
+    };
+
+    const filtered = filter === 'all' ? cars : cars.filter(c => c.status === filter);
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Car Listings Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Oversight of all car listings on the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {['all', 'available', 'reserved', 'sold', 'draft'].map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                            {f === 'all' ? ` (${cars.length})` : ` (${cars.filter(c => c.status === f).length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading cars...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Price (TZS)</th>
+                                    <th>Status</th>
+                                    <th>Location</th>
+                                    <th>Seller</th>
+                                    <th>Listed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="6" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No listings found</td></tr>
+                                ) : filtered.map(car => (
+                                    <tr key={car.car_id}>
+                                        <td>{car.year} {car.make} {car.model}</td>
+                                        <td>{(car.price || 0).toLocaleString()}</td>
+                                        <td><span className={`badge ${statusBadge(car.status)}`}>{car.status || 'unknown'}</span></td>
+                                        <td>{car.location || '—'}</td>
+                                        <td>{car.seller?.business_name || '—'}</td>
+                                        <td>{car.listed_at ? new Date(car.listed_at).toLocaleDateString('en-GB') : car.created_at ? new Date(car.created_at).toLocaleDateString('en-GB') : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Applications View
+function AdminApplicationsView() {
+    const [applications, setApplications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    const fetchApplications = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    submitted_at,
+                    created_at,
+                    status,
+                    loan_amount,
+                    buyer:buyers!buyer_id(user:users!buyers_user_id_fkey(first_name, last_name)),
+                    car:cars!car_id(make, model, year),
+                    bank:banks!bank_id(bank_name),
+                    seller:sellers!seller_id(business_name)
+                `)
+                .order('created_at', { ascending: false });
+            setApplications(data || []);
+        } catch (error) {
+            console.error('Error fetching applications:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const statusBadge = (status) => {
+        const map = { submitted: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger', disbursed: 'badge-success' };
+        return map[status] || 'badge-warning';
+    };
+
+    const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
+    const statuses = ['all', 'submitted', 'approved', 'rejected', 'disbursed'];
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Application Management</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>All loan applications across the platform.</p>
+            </div>
+            <div className="card">
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {statuses.map(f => (
+                        <button
+                            key={f}
+                            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setFilter(f)}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                            {f === 'all' ? ` (${applications.length})` : ` (${applications.filter(a => a.status === f).length})`}
+                        </button>
+                    ))}
+                </div>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading applications...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Buyer</th>
+                                    <th>Car</th>
+                                    <th>Bank</th>
+                                    <th>Seller</th>
+                                    <th>Loan Amount (TZS)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No applications found</td></tr>
+                                ) : filtered.map(app => (
+                                    <tr key={app.application_id}>
+                                        <td>{new Date(app.submitted_at || app.created_at).toLocaleDateString('en-GB')}</td>
+                                        <td>{[app.buyer?.user?.first_name, app.buyer?.user?.last_name].filter(Boolean).join(' ') || '—'}</td>
+                                        <td>{app.car ? `${app.car.year} ${app.car.make} ${app.car.model}` : '—'}</td>
+                                        <td>{app.bank?.bank_name || '—'}</td>
+                                        <td>{app.seller?.business_name || '—'}</td>
+                                        <td>{(app.loan_amount || 0).toLocaleString()}</td>
+                                        <td><span className={`badge ${statusBadge(app.status)}`}>{app.status}</span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Revenue View
+function AdminRevenueView() {
+    const [disbursed, setDisbursed] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchRevenue();
+    }, []);
+
+    const fetchRevenue = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    disbursement_date,
+                    loan_amount,
+                    platform_fee_amount,
+                    disbursement_amount,
+                    buyer:buyers!buyer_id(user:users!buyers_user_id_fkey(first_name, last_name)),
+                    car:cars!car_id(make, model, year),
+                    seller:sellers!seller_id(business_name)
+                `)
+                .eq('status', 'disbursed')
+                .order('disbursement_date', { ascending: false });
+            setDisbursed(data || []);
+        } catch (error) {
+            console.error('Error fetching revenue:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getFee = (row) => parseFloat(row.platform_fee_amount || parseFloat(row.loan_amount || 0) * PLATFORM_FEE_RATE);
+
+    const totalRevenue = disbursed.reduce((s, a) => s + getFee(a), 0);
+    const totalDisbursed = disbursed.reduce((s, a) => s + parseFloat(a.disbursement_amount || 0), 0);
+    const totalTx = disbursed.length;
+    const avgFee = totalTx > 0 ? totalRevenue / totalTx : 0;
+
+    // Monthly breakdown — last 6 months
+    const monthlyData = (() => {
+        const now = new Date();
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+            const rows = disbursed.filter(a => {
+                const ad = new Date(a.disbursement_date);
+                return ad.getMonth() === d.getMonth() && ad.getFullYear() === d.getFullYear();
+            });
+            months.push({ label, count: rows.length, fees: rows.reduce((s, a) => s + getFee(a), 0) });
+        }
+        return months;
+    })();
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Revenue Tracking</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Platform fees earned from disbursed loans.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="stat-card">
+                    <div className="stat-label">Total Platform Revenue</div>
+                    <div className="stat-value">{totalRevenue.toLocaleString()}</div>
+                    <div className="stat-change">TZS earned</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Total Disbursed to Sellers</div>
+                    <div className="stat-value">{(totalDisbursed / 1000000).toFixed(1)}M</div>
+                    <div className="stat-change">TZS sent to sellers</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Total Transactions</div>
+                    <div className="stat-value">{totalTx}</div>
+                    <div className="stat-change">Disbursed loans</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Avg Fee per Transaction</div>
+                    <div className="stat-value">{avgFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div className="stat-change">TZS per loan</div>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Monthly Breakdown (Last 6 Months)</h3>
+                {loading ? (
+                    <p style={{ color: '#6c757d' }}>Loading...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Transactions</th>
+                                    <th>Platform Fees (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {monthlyData.map(m => (
+                                    <tr key={m.label}>
+                                        <td>{m.label}</td>
+                                        <td>{m.count}</td>
+                                        <td>{m.fees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Disbursement Records</h3>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading...</p>
+                ) : disbursed.length === 0 ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursed loans yet.</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Buyer</th>
+                                    <th>Car</th>
+                                    <th>Seller</th>
+                                    <th>Loan Amount (TZS)</th>
+                                    <th>Platform Fee (TZS)</th>
+                                    <th>Seller Received (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {disbursed.map(row => (
+                                    <tr key={row.application_id}>
+                                        <td>{row.disbursement_date ? new Date(row.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                        <td>{row.buyer?.user ? `${row.buyer.user.first_name} ${row.buyer.user.last_name}` : '—'}</td>
+                                        <td>{row.car ? `${row.car.year} ${row.car.make} ${row.car.model}` : '—'}</td>
+                                        <td>{row.seller?.business_name || '—'}</td>
+                                        <td>{(row.loan_amount || 0).toLocaleString()}</td>
+                                        <td>{getFee(row).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                        <td>{(row.disbursement_amount || 0).toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Analytics View
+function AdminAnalyticsView() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchAnalytics();
+    }, []);
+
+    const fetchAnalytics = async () => {
+        setLoading(true);
+        try {
+            const [
+                { count: totalBuyers },
+                { count: totalSellers },
+                { count: totalBanks },
+                { data: carsData },
+                { data: appsData }
+            ] = await Promise.all([
+                supabase.from('buyers').select('*', { count: 'exact', head: true }),
+                supabase.from('sellers').select('*', { count: 'exact', head: true }),
+                supabase.from('banks').select('*', { count: 'exact', head: true }),
+                supabase.from('cars').select('car_id, status'),
+                supabase.from('loan_applications').select('application_id, status, submitted_at, created_at').order('created_at', { ascending: false })
+            ]);
+
+            setData({
+                totalUsers: (totalBuyers || 0) + (totalSellers || 0) + (totalBanks || 0),
+                totalCars: carsData?.length || 0,
+                totalApplications: appsData?.length || 0,
+                totalDisbursed: appsData?.filter(a => a.status === 'disbursed').length || 0,
+                cars: carsData || [],
+                apps: appsData || []
+            });
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <div className="card"><p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading analytics...</p></div>;
+    if (!data) return null;
+
+    const appStatuses = ['submitted', 'approved', 'rejected', 'disbursed'];
+    const carStatuses = ['available', 'reserved', 'sold', 'draft'];
+
+    const appCounts = appStatuses.map(s => ({ label: s, count: data.apps.filter(a => a.status === s).length }));
+    const carCounts = carStatuses.map(s => ({ label: s, count: data.cars.filter(c => c.status === s).length }));
+    const maxApp = Math.max(...appCounts.map(x => x.count), 1);
+    const maxCar = Math.max(...carCounts.map(x => x.count), 1);
+
+    // Monthly applications — last 6 months
+    const now = new Date();
+    const monthlyApps = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        const label = d.toLocaleDateString('en-GB', { month: 'short' });
+        const count = data.apps.filter(a => {
+            const ad = new Date(a.submitted_at || a.created_at);
+            return ad.getMonth() === d.getMonth() && ad.getFullYear() === d.getFullYear();
+        }).length;
+        return { label, count };
+    });
+    const maxMonthly = Math.max(...monthlyApps.map(m => m.count), 1);
+
+    const statusColor = (s) => {
+        const map = { submitted: '#f59e0b', approved: '#10b981', rejected: '#ef4444', disbursed: '#667eea', available: '#10b981', reserved: '#f59e0b', sold: '#ef4444', draft: '#9ca3af' };
+        return map[s] || '#667eea';
+    };
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Platform Analytics</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Key metrics and trends across the platform.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="stat-card"><div className="stat-label">Total Users</div><div className="stat-value">{data.totalUsers}</div></div>
+                <div className="stat-card"><div className="stat-label">Total Cars</div><div className="stat-value">{data.totalCars}</div></div>
+                <div className="stat-card"><div className="stat-label">Total Applications</div><div className="stat-value">{data.totalApplications}</div></div>
+                <div className="stat-card"><div className="stat-label">Disbursed Loans</div><div className="stat-value">{data.totalDisbursed}</div></div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div className="card">
+                    <h3 className="card-title" style={{ marginBottom: '1rem' }}>Application Status Breakdown</h3>
+                    {appCounts.map(({ label, count }) => (
+                        <div key={label} style={{ marginBottom: '0.75rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                                <span style={{ textTransform: 'capitalize' }}>{label}</span>
+                                <span style={{ fontWeight: '600' }}>{count} ({data.totalApplications > 0 ? Math.round(count / data.totalApplications * 100) : 0}%)</span>
+                            </div>
+                            <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / maxApp) * 100}%`, background: statusColor(label), height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="card">
+                    <h3 className="card-title" style={{ marginBottom: '1rem' }}>Car Status Breakdown</h3>
+                    {carCounts.map(({ label, count }) => (
+                        <div key={label} style={{ marginBottom: '0.75rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                                <span style={{ textTransform: 'capitalize' }}>{label}</span>
+                                <span style={{ fontWeight: '600' }}>{count} ({data.totalCars > 0 ? Math.round(count / data.totalCars * 100) : 0}%)</span>
+                            </div>
+                            <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / maxCar) * 100}%`, background: statusColor(label), height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1.5rem' }}>Monthly Applications Trend (Last 6 Months)</h3>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '180px', paddingBottom: '0.5rem' }}>
+                    {monthlyApps.map(({ label, count }) => (
+                        <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{count}</span>
+                            <div style={{ width: '100%', background: '#667eea', borderRadius: '4px 4px 0 0', height: `${Math.max((count / maxMonthly) * 140, count > 0 ? 8 : 0)}px`, minHeight: count > 0 ? '8px' : '0', transition: 'height 0.3s' }} />
+                            <span style={{ fontSize: '11px', color: '#6c757d', marginTop: '6px' }}>{label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
+
+
+// Admin: Hero Slider View
+function AdminSliderView() {
+    const [slides, setSlides] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [form, setForm] = useState({ title: '', subtitle: '', accent: '#f0a500' });
+    const [imageFile, setImageFile] = useState(null);
+    const [msg, setMsg] = useState('');
+
+    useEffect(() => { fetchSlides(); }, []);
+
+    const fetchSlides = async () => {
+        setLoading(true);
+        const { data } = await supabase.from('hero_slides').select('*').order('sort_order');
+        setSlides(data || []);
+        setLoading(false);
+    };
+
+    const handleUpload = async (e) => {
+        e.preventDefault();
+        if (!imageFile) { setMsg('Please select an image file.'); return; }
+        setUploading(true);
+        setMsg('');
+        const ext = imageFile.name.split('.').pop();
+        const fileName = `slide_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('slider-images').upload(fileName, imageFile);
+        if (upErr) { setMsg('Upload failed: ' + upErr.message); setUploading(false); return; }
+        const { data: { publicUrl } } = supabase.storage.from('slider-images').getPublicUrl(fileName);
+        const nextOrder = slides.length > 0 ? Math.max(...slides.map(s => s.sort_order)) + 1 : 1;
+        const { error: dbErr } = await supabase.from('hero_slides').insert({
+            image_url: publicUrl,
+            title: form.title || null,
+            subtitle: form.subtitle || null,
+            accent: form.accent,
+            sort_order: nextOrder,
+        });
+        if (dbErr) { setMsg('DB error: ' + dbErr.message); } else {
+            setMsg('Slide added successfully!');
+            setForm({ title: '', subtitle: '', accent: '#f0a500' });
+            setImageFile(null);
+            e.target.reset();
+            fetchSlides();
+        }
+        setUploading(false);
+    };
+
+    const handleDelete = async (slide) => {
+        if (!window.confirm('Delete this slide?')) return;
+        // Delete from storage if it's a Supabase URL
+        if (slide.image_url.includes('slider-images')) {
+            const path = slide.image_url.split('/slider-images/')[1];
+            await supabase.storage.from('slider-images').remove([path]);
+        }
+        await supabase.from('hero_slides').delete().eq('id', slide.id);
+        fetchSlides();
+    };
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Hero Slider</h2>
+            <p style={{ color: '#6c757d', marginBottom: '2rem', fontSize: '0.875rem' }}>
+                Manage the homepage sliding images. Max recommended: 5 slides.
+            </p>
+
+            {/* Current Slides */}
+            <div style={{ marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Current Slides ({slides.length})</h3>
+                {loading ? <p style={{ color: '#6c757d' }}>Loading...</p> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {slides.map((slide, i) => (
+                            <div key={slide.id} style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                                <div style={{
+                                    height: '160px', backgroundImage: `url(${slide.image_url})`,
+                                    backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative'
+                                }}>
+                                    <span style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        #{i + 1}
+                                    </span>
+                                </div>
+                                <div style={{ padding: '0.75rem' }}>
+                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#161616', marginBottom: '0.25rem' }}>
+                                        {slide.title || <span style={{ color: '#aaa', fontStyle: 'italic' }}>No title</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#6c757d', marginBottom: '0.75rem' }}>
+                                        {slide.subtitle || '—'}
+                                    </div>
+                                    <button onClick={() => handleDelete(slide)} style={{
+                                        background: '#da1e28', color: 'white', border: 'none',
+                                        padding: '0.375rem 0.875rem', borderRadius: '4px',
+                                        fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', width: '100%'
+                                    }}>Delete Slide</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Add New Slide */}
+            <div style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem' }}>Add New Slide</h3>
+                <form onSubmit={handleUpload}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Image File *</label>
+                        <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} required
+                            style={{ fontSize: '0.875rem', width: '100%' }} />
+                        <div style={{ fontSize: '0.75rem', color: '#8d8d8d', marginTop: '0.25rem' }}>Recommended: 700 × 488px landscape</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Title</label>
+                            <input type="text" placeholder="e.g. Drive Your Dream Car Today" value={form.title}
+                                onChange={e => setForm({ ...form, title: e.target.value })}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Subtitle</label>
+                            <input type="text" placeholder="e.g. Low rates · Quick approvals" value={form.subtitle}
+                                onChange={e => setForm({ ...form, subtitle: e.target.value })}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                        </div>
+                    </div>
+                    {msg && <div style={{ padding: '0.625rem 1rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.875rem', background: msg.includes('success') ? '#defbe6' : '#fff1f1', color: msg.includes('success') ? '#0e6027' : '#da1e28' }}>{msg}</div>}
+                    <button type="submit" disabled={uploading} style={{
+                        background: '#667eea', color: 'white', border: 'none',
+                        padding: '0.625rem 1.5rem', borderRadius: '4px',
+                        fontWeight: 600, fontSize: '0.9375rem', cursor: uploading ? 'not-allowed' : 'pointer',
+                        opacity: uploading ? 0.7 : 1
+                    }}>{uploading ? 'Uploading...' : 'Add Slide'}</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Admin: Settings View
+function AdminSettingsView() {
+    const [adminUsers, setAdminUsers] = useState([]);
+    const [platformInfo, setPlatformInfo] = useState({ activeBanks: 0, verifiedSellers: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        try {
+            const [{ data: admins }, { count: activeBanks }, { count: verifiedSellers }] = await Promise.all([
+                supabase.from('admins').select('admin_id, is_active, user:users!admins_user_id_fkey(first_name, last_name, email)'),
+                supabase.from('banks').select('*', { count: 'exact', head: true }),
+                supabase.from('sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified')
+            ]);
+            setAdminUsers(admins || []);
+            setPlatformInfo({ activeBanks: activeBanks || 0, verifiedSellers: verifiedSellers || 0 });
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Admin Settings</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Platform configuration and admin user management.</p>
+            </div>
+
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Platform Configuration</h3>
+                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>Platform Fee Rate</div>
+                            <div style={{ fontSize: '13px', color: '#6c757d' }}>To change this rate, update PLATFORM_FEE_RATE in App.js</div>
+                        </div>
+                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#667eea' }}>
+                            {(PLATFORM_FEE_RATE * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="stat-card">
+                        <div className="stat-label">Active Banks</div>
+                        <div className="stat-value">{platformInfo.activeBanks}</div>
+                        <div className="stat-change">Partner banks</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-label">Verified Sellers</div>
+                        <div className="stat-value">{platformInfo.verifiedSellers}</div>
+                        <div className="stat-change">Approved to list cars</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Admin Users</h3>
+                {loading ? (
+                    <p style={{ color: '#6c757d' }}>Loading...</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {adminUsers.length === 0 ? (
+                                    <tr><td colSpan="3" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No admin users found</td></tr>
+                                ) : adminUsers.map(admin => (
+                                    <tr key={admin.admin_id}>
+                                        <td>{admin.user ? `${admin.user.first_name} ${admin.user.last_name}` : '—'}</td>
+                                        <td>{admin.user?.email || '—'}</td>
+                                        <td>
+                                            <span className={`badge ${admin.is_active ? 'badge-success' : 'badge-danger'}`}>
+                                                {admin.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
 // Main AdminDashboard Component
 function AdminDashboard() {
     const [view, setView] = useState('overview');
@@ -1231,44 +2099,15 @@ function AdminDashboard() {
         <>
             <AdminSidebar activeView={view} onNavigate={setView} />
             <div className="main-content" style={{ marginLeft: '260px', padding: '2rem' }}>
-                {view === 'overview' && <AdminOverview />}
+                {view === 'overview' && <AdminOverview onNavigate={setView} />}
                 {view === 'seller-verification' && <SellerVerification />}
-                {view === 'users' && (
-                    <div className="card">
-                        <h3>User Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View and manage all users.</p>
-                    </div>
-                )}
-                {view === 'cars' && (
-                    <div className="card">
-                        <h3>Car Listings Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Moderate and approve car listings.</p>
-                    </div>
-                )}
-                {view === 'applications' && (
-                    <div className="card">
-                        <h3>Application Management</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View all loan applications across the platform.</p>
-                    </div>
-                )}
-                {view === 'revenue' && (
-                    <div className="card">
-                        <h3>Revenue Tracking</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Track commissions and platform revenue.</p>
-                    </div>
-                )}
-                {view === 'analytics' && (
-                    <div className="card">
-                        <h3>Platform Analytics</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... View detailed charts and insights.</p>
-                    </div>
-                )}
-                {view === 'settings' && (
-                    <div className="card">
-                        <h3>Admin Settings</h3>
-                        <p style={{ color: '#6c757d' }}>Coming soon... Configure platform settings and manage admin users.</p>
-                    </div>
-                )}
+                {view === 'users' && <AdminUsersView />}
+                {view === 'cars' && <AdminCarsView />}
+                {view === 'applications' && <AdminApplicationsView />}
+                {view === 'revenue' && <AdminRevenueView />}
+                {view === 'analytics' && <AdminAnalyticsView />}
+                {view === 'settings' && <AdminSettingsView />}
+                {view === 'slider' && <AdminSliderView />}
             </div>
         </>
     );
@@ -1345,22 +2184,22 @@ function TopNav({ user, onLogout }) {
 function Sidebar({ userType, activeView, onNavigate }) {
     const menus = {
         buyer: [
-            { id: 'browse', label: 'Tafuta Magari', icon: '🚗' },
-            { id: 'applications', label: 'Maombi Yangu', icon: '📋' },
-            { id: 'saved', label: 'Magari Nipendeayo', icon: '❤️' }
+            { id: 'browse', label: 'Browse Cars', icon: '🚗' },
+            { id: 'applications', label: 'My Applications', icon: '📋' }
         ],
         seller: [
-            { id: 'dashboard', label: 'Dashibodi', icon: '📊' },
-            { id: 'listings', label: 'Magari Yangu', icon: '🚗' },
-            { id: 'applications', label: 'Maombi', icon: '📋' },
-            { id: 'payment-settings', label: 'Mipangilio ya Malipo', icon: '💳' },
-            { id: 'add-car', label: 'Ongeza Gari', icon: '➕' }
+            { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+            { id: 'cars', label: 'My Cars', icon: '🚗' },
+            { id: 'applications', label: 'Applications', icon: '📋' },
+            { id: 'payment-settings', label: 'Payment Settings', icon: '💳' },
+            { id: 'add-car', label: 'Add New Car', icon: '➕' }
         ],
         bank: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
             { id: 'applications', label: 'Applications', icon: '📋' },
             { id: 'products', label: 'Loan Products', icon: '💰' },
-            { id: 'analytics', label: 'Analytics', icon: '📈' }
+            { id: 'disbursements', label: 'Disbursement History', icon: '💸' },
+            { id: 'commission', label: 'Commission', icon: '📈' }
         ],
         insurance: [
             { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -1428,7 +2267,7 @@ function BuyerDashboard() {
         setAppsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) { setAppsLoading(false); return; }
 
             const { data: buyerData } = await supabase
                 .from('buyers')
@@ -1436,13 +2275,13 @@ function BuyerDashboard() {
                 .eq('user_id', user.id)
                 .single();
 
-            if (!buyerData) return;
+            if (!buyerData) { setAppsLoading(false); return; }
 
             const { data, error } = await supabase
                 .from('loan_applications')
                 .select(`
                     *,
-                    car:cars(car_id, make, model, year, images),
+                    car:cars(car_id, make, model, year, color, mileage, transmission, fuel_type, body_type, location_city, images),
                     bank:banks(bank_name)
                 `)
                 .eq('buyer_id', buyerData.buyer_id)
@@ -1624,7 +2463,7 @@ function BuyerDashboard() {
             setSelectedCar(null);
         } catch (error) {
             console.error('Error submitting application:', error);
-            alert('❌ Error submitting application: ' + error.message);
+            alert('❌ Error submitting application: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -1709,14 +2548,16 @@ function BuyerDashboard() {
                                 let inspectionBanner = null;
                                 if (inspStatus === 'scheduled' && inspDate) {
                                     inspectionBanner = (
-                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span>🗓️</span>
-                                            <span style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</span>
+                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+                                            <div style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</div>
                                             {app.inspection_report?.inspector_name && (
-                                                <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
-                                                    — Inspector: {app.inspection_report.inspector_name}
-                                                </span>
+                                                <div style={{ color: '#525252', fontSize: '0.8125rem', marginTop: '0.2rem' }}>
+                                                    Inspector: {app.inspection_report.inspector_name}
+                                                </div>
                                             )}
+                                            <div style={{ fontSize: '0.8125rem', color: '#525252', marginTop: '0.2rem' }}>
+                                                {[app.car?.color, app.car?.mileage ? `${app.car.mileage.toLocaleString()} km` : null, app.car?.transmission, app.car?.fuel_type].filter(Boolean).join(' · ')}
+                                            </div>
                                         </div>
                                     );
                                 } else if (inspStatus === 'passed') {
@@ -2173,7 +3014,7 @@ function ProductsView() {
             fetchProducts();
         } catch (error) {
             console.error('Error saving product:', error);
-            alert('❌ Error saving product: ' + error.message);
+            alert('❌ Error saving product: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -2413,6 +3254,10 @@ function DisbursementModal({ application, onClose, onSuccess }) {
     });
     const [processing, setProcessing] = useState(false);
 
+    const loanAmount = parseFloat(application.loan_amount || 0);
+    const platformFee = Math.round(loanAmount * PLATFORM_FEE_RATE);
+    const sellerAmount = loanAmount - platformFee;
+
     const handleDisburse = async () => {
         if (!disbursementData.reference.trim()) {
             alert('❌ Please enter payment reference number');
@@ -2425,7 +3270,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
         }
 
         const confirmed = window.confirm(
-            `Are you sure you want to disburse TZS ${application.loan_amount.toLocaleString()}?\n\nThis action cannot be undone.`
+            `Confirm disbursement:\n\nLoan Amount:    TZS ${loanAmount.toLocaleString()}\nPlatform Fee:   TZS ${platformFee.toLocaleString()} (0.5%)\nSeller Receives: TZS ${sellerAmount.toLocaleString()}\n\nThis action cannot be undone.`
         );
 
         if (!confirmed) return;
@@ -2441,7 +3286,8 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                     disbursement_date: new Date().toISOString(),
                     disbursement_reference: disbursementData.reference,
                     disbursement_method: application.seller?.payment_method || 'bank_transfer',
-                    disbursement_amount: application.loan_amount,
+                    disbursement_amount: sellerAmount,
+                    platform_fee_amount: platformFee,
                     disbursed_by: user.id,
                     disbursement_notes: disbursementData.notes || null
                 })
@@ -2451,17 +3297,17 @@ function DisbursementModal({ application, onClose, onSuccess }) {
 
             const { error: carError } = await supabase
                 .from('cars')
-                .update({ status: 'sold' })
+                .update({ status: 'sold', sold_date: new Date().toISOString() })
                 .eq('car_id', application.car_id);
 
-            if (carError) throw carError;
+            if (carError) console.warn('Could not update car sold_date:', carError);
 
-            alert('✅ Disbursement completed successfully!');
+            alert(`✅ Disbursement completed!\n\nTZS ${sellerAmount.toLocaleString()} sent to seller.\nTZS ${platformFee.toLocaleString()} retained as platform fee.`);
             onSuccess();
             onClose();
         } catch (error) {
             console.error('Error processing disbursement:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setProcessing(false);
         }
@@ -2476,26 +3322,36 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                 </div>
 
                 <div className="modal-body">
-                    <div className="card" style={{ background: '#f0fdf4', marginBottom: '1.5rem' }}>
-                        <h4 style={{ marginBottom: '1rem', color: '#065f46' }}>📋 Loan Summary</h4>
+                    <div className="card" style={{ background: '#f0fdf4', marginBottom: '1.5rem', borderLeft: '4px solid #10b981' }}>
+                        <h4 style={{ marginBottom: '1rem', color: '#065f46' }}>Disbursement Breakdown</h4>
                         <table style={{ width: '100%', fontSize: '14px' }}>
                             <tbody>
                                 <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold', width: '40%' }}>Loan Amount:</td>
-                                    <td style={{ padding: '0.5rem', fontSize: '16px', fontWeight: '700', color: '#065f46' }}>
-                                        TZS {application.loan_amount?.toLocaleString()}
-                                    </td>
+                                    <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold', width: '55%' }}>Car:</td>
+                                    <td style={{ padding: '0.4rem 0.5rem' }}>{application.car_make} {application.car_model} {application.car_year}</td>
                                 </tr>
                                 <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Car:</td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {application.car_make} {application.car_model} {application.car_year}
+                                    <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold' }}>Buyer:</td>
+                                    <td style={{ padding: '0.4rem 0.5rem' }}>{application.buyer?.user?.first_name} {application.buyer?.user?.last_name}</td>
+                                </tr>
+                                <tr style={{ borderTop: '1px solid #d1fae5', marginTop: '0.5rem' }}>
+                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Total Loan Amount:</td>
+                                    <td style={{ padding: '0.5rem', fontWeight: '700' }}>TZS {loanAmount.toLocaleString()}</td>
+                                </tr>
+                                <tr style={{ background: '#fff7ed' }}>
+                                    <td style={{ padding: '0.5rem', color: '#d97706' }}>
+                                        Platform Fee (0.5%):
+                                    </td>
+                                    <td style={{ padding: '0.5rem', color: '#d97706', fontWeight: '600' }}>
+                                        − TZS {platformFee.toLocaleString()}
                                     </td>
                                 </tr>
-                                <tr>
-                                    <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Buyer:</td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        {application.buyer?.user?.first_name} {application.buyer?.user?.last_name}
+                                <tr style={{ background: '#d1fae5' }}>
+                                    <td style={{ padding: '0.5rem', fontWeight: 'bold', fontSize: '15px' }}>
+                                        Seller Receives:
+                                    </td>
+                                    <td style={{ padding: '0.5rem', fontWeight: '800', fontSize: '16px', color: '#065f46' }}>
+                                        TZS {sellerAmount.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -2694,7 +3550,7 @@ function ApproveWithInspectionModal({ application, onClose, onApproved }) {
             onApproved();
             onClose();
         } catch (error) {
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setProcessing(false);
         }
@@ -2709,9 +3565,17 @@ function ApproveWithInspectionModal({ application, onClose, onApproved }) {
                 </div>
                 <div className="modal-body">
                     <div className="card" style={{ background: '#f0f4ff', marginBottom: '1.5rem' }}>
-                        <strong>{application.car_make} {application.car_model} {application.car_year}</strong>
-                        <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.25rem' }}>
-                            TZS {parseFloat(application.loan_amount || 0).toLocaleString()} · {application.loan_term_months} months
+                        <strong style={{ fontSize: '1rem' }}>{application.car_make} {application.car_model} {application.car_year}</strong>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem 1rem', marginTop: '0.5rem', fontSize: '0.8125rem', color: '#525252' }}>
+                            {application.car?.color && <span><strong>Colour:</strong> {application.car.color}</span>}
+                            {application.car?.mileage && <span><strong>Mileage:</strong> {application.car.mileage.toLocaleString()} km</span>}
+                            {application.car?.transmission && <span><strong>Transmission:</strong> {application.car.transmission}</span>}
+                            {application.car?.fuel_type && <span><strong>Fuel:</strong> {application.car.fuel_type}</span>}
+                            {application.car?.body_type && <span><strong>Body:</strong> {application.car.body_type}</span>}
+                            {application.car?.location_city && <span><strong>Location:</strong> {application.car.location_city}</span>}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#0f62fe', marginTop: '0.5rem', fontWeight: 600 }}>
+                            TZS {parseFloat(application.car_price || 0).toLocaleString()} · Loan: TZS {parseFloat(application.loan_amount || 0).toLocaleString()} · {application.loan_term_months} months
                         </div>
                     </div>
 
@@ -2834,7 +3698,7 @@ function InspectionReportModal({ application, onClose, onSaved }) {
                 })
                 .eq('application_id', application.application_id);
             if (error) throw error;
-            alert(`✅ Inspection report submitted. Result: ${report.overall_result.toUpperCase()}`);
+            alert(`✅ Inspection report submitted. Result: ${report.overall_result?.toUpperCase() || 'Unknown'}`);
             onSaved();
             onClose();
         } catch (err) {
@@ -2992,6 +3856,8 @@ function PostApprovalTracker({ application, onUpdate }) {
     const [inspectionStatus, setInspectionStatus] = useState(application.inspection_status || 'pending');
     const [gpsInstalled, setGpsInstalled] = useState(application.gps_tracker_installed || false);
     const [logbookTransferred, setLogbookTransferred] = useState(application.logbook_transferred_to_bank || false);
+    const [gpsSerial, setGpsSerial] = useState(application.gps_tracker_serial || '');
+    const [savingSerial, setSavingSerial] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
 
@@ -3023,6 +3889,14 @@ function PostApprovalTracker({ application, onUpdate }) {
         await update({ logbook_transferred_to_bank: newVal, logbook_transfer_date: newVal ? new Date().toISOString() : null });
     };
 
+    const handleSaveSerial = async () => {
+        if (!gpsSerial.trim()) return;
+        setSavingSerial(true);
+        await update({ gps_tracker_serial: gpsSerial.trim() });
+        setSavingSerial(false);
+        alert('GPS serial number saved.');
+    };
+
     const handleInspectionFail = async (action) => {
         if (action === 'reject') {
             const reason = prompt('Enter rejection reason:');
@@ -3044,7 +3918,25 @@ function PostApprovalTracker({ application, onUpdate }) {
 
     return (
         <div className="card" style={{ marginTop: '1.5rem' }}>
-            <h4 style={{ marginBottom: '1rem' }}>📋 Post-Approval Checklist</h4>
+            <h4 style={{ marginBottom: '0.75rem' }}>Post-Approval Checklist</h4>
+
+            {/* Car identity block */}
+            <div style={{ background: '#f0f4ff', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.35rem' }}>
+                    {application.car_make} {application.car_model} {application.car_year}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.15rem 1rem', color: '#525252' }}>
+                    {application.car?.color && <span><strong>Colour:</strong> {application.car.color}</span>}
+                    {application.car?.mileage && <span><strong>Mileage:</strong> {application.car.mileage.toLocaleString()} km</span>}
+                    {application.car?.transmission && <span><strong>Transmission:</strong> {application.car.transmission}</span>}
+                    {application.car?.fuel_type && <span><strong>Fuel:</strong> {application.car.fuel_type}</span>}
+                    {application.car?.body_type && <span><strong>Body:</strong> {application.car.body_type}</span>}
+                    {application.car?.location_city && <span><strong>Location:</strong> {application.car.location_city}</span>}
+                </div>
+                <div style={{ marginTop: '0.35rem', color: '#0f62fe', fontWeight: 600 }}>
+                    TZS {parseFloat(application.car_price || 0).toLocaleString()}
+                </div>
+            </div>
 
             {allComplete && (
                 <div style={{ background: '#d1f4e0', border: '1px solid #24a148', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: '#0f6938', fontWeight: 600 }}>
@@ -3135,6 +4027,29 @@ function PostApprovalTracker({ application, onUpdate }) {
                         </span>
                     </label>
                 </div>
+                {/* Serial number */}
+                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={gpsSerial}
+                        onChange={e => setGpsSerial(e.target.value)}
+                        placeholder="GPS tracker serial number"
+                        style={{ flex: 1, fontSize: '13px', padding: '0.375rem 0.625rem' }}
+                    />
+                    <button
+                        className="btn btn-sm btn-outline"
+                        onClick={handleSaveSerial}
+                        disabled={savingSerial || !gpsSerial.trim()}
+                    >
+                        {savingSerial ? 'Saving…' : 'Save'}
+                    </button>
+                </div>
+                {application.gps_tracker_serial && (
+                    <div style={{ fontSize: '12px', color: '#10b981', marginTop: '0.35rem' }}>
+                        Recorded serial: <strong>{application.gps_tracker_serial}</strong>
+                    </div>
+                )}
             </div>
 
             {/* ── LOGBOOK ── */}
@@ -3250,7 +4165,7 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                     <td>
                                         <div>
                                             <strong>
-                                                {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
+                                                {[app.buyer?.user?.first_name, app.buyer?.user?.last_name].filter(Boolean).join(' ') || '—'}
                                             </strong>
                                             <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
                                                 {app.buyer?.user?.email}
@@ -3266,10 +4181,10 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                         </div>
                                     </td>
                                     <td>
-                                        <strong>TZS {parseFloat(app.loan_amount).toLocaleString()}</strong>
+                                        <strong>TZS {(parseFloat(app.loan_amount) || 0).toLocaleString()}</strong>
                                     </td>
                                     <td>
-                                        TZS {parseFloat(app.monthly_payment).toLocaleString()}
+                                        TZS {(parseFloat(app.monthly_payment) || 0).toLocaleString()}
                                     </td>
                                     <td>{app.loan_term_months} months</td>
                                     <td>{getStatusBadge(app.status)}</td>
@@ -3284,18 +4199,25 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
                                                 </button>
                                             )}
                                             
-                                            {app.status === 'approved' && 
-                                             app.inspection_status === 'passed' &&
-                                             app.gps_tracker_status === 'installed' &&
-                                             app.logbook_status === 'collected' && (
-                                                <button 
-                                                    className="btn btn-sm btn-primary"
-                                                    onClick={() => setShowDisbursementModal(app)}
-                                                    style={{ background: '#10b981', borderColor: '#10b981' }}
-                                                >
-                                                    💸 Disburse
-                                                </button>
-                                            )}
+                                            {app.status === 'approved' && (() => {
+                                                const inspOk = !app.inspection_required || app.inspection_status === 'passed' || app.inspection_status === 'not_required';
+                                                const gpsOk = app.gps_tracker_installed === true;
+                                                const logbookOk = app.logbook_transferred_to_bank === true;
+                                                const readyToDisburse = inspOk && gpsOk && logbookOk;
+                                                return (
+                                                    <button
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => setShowDisbursementModal(app)}
+                                                        style={{
+                                                            background: readyToDisburse ? '#10b981' : '#f59e0b',
+                                                            borderColor: readyToDisburse ? '#10b981' : '#f59e0b'
+                                                        }}
+                                                        title={readyToDisburse ? 'All checks complete — ready to disburse' : 'Checklist incomplete — disburse anyway?'}
+                                                    >
+                                                        Disburse{!readyToDisburse ? ' *' : ''}
+                                                    </button>
+                                                );
+                                            })()}
                                             
                                             {app.status === 'disbursed' && (
                                                 <div style={{ fontSize: '12px' }}>
@@ -3415,6 +4337,11 @@ function BankDashboard() {
                         model,
                         year,
                         price,
+                        color,
+                        mileage,
+                        transmission,
+                        fuel_type,
+                        body_type,
                         location_city
                     )
                 `)
@@ -3577,7 +4504,7 @@ function BankDashboard() {
                                                     {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
                                                 </td>
                                                 <td>{app.car_make} {app.car_model} {app.car_year}</td>
-                                                <td>TZS {parseFloat(app.loan_amount).toLocaleString()}</td>
+                                                <td>TZS {(parseFloat(app.loan_amount) || 0).toLocaleString()}</td>
                                                 <td>{getStatusBadge(app.status)}</td>
                                                 <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
                                                 <td>
@@ -3619,6 +4546,156 @@ function BankDashboard() {
 )}
 
 
+{view === 'disbursements' && (
+    <>
+        <div className="card-header">
+            <h1 className="card-title">Disbursement History</h1>
+            <p className="card-subtitle">All completed fund transfers to sellers</p>
+        </div>
+        {(() => {
+            const disbursed = applications.filter(a => a.status === 'disbursed');
+            const totalDisbursed = disbursed.reduce((s, a) => s + parseFloat(a.disbursement_amount || a.loan_amount || 0), 0);
+            return (
+                <>
+                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+                        <div className="stat-card">
+                            <div className="stat-label">Total Disbursed</div>
+                            <div className="stat-value">{(totalDisbursed / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Transactions</div>
+                            <div className="stat-value">{disbursed.length}</div>
+                            <div className="stat-change">Completed</div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        {disbursed.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursements yet.</p>
+                        ) : (
+                            <div className="table-scroll">
+                                <table className="comparison-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Buyer</th>
+                                            <th>Car</th>
+                                            <th>Seller</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th>Loan Amount</th>
+                                            <th>Platform Fee</th>
+                                            <th>Seller Received</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {disbursed.sort((a,b) => new Date(b.disbursement_date) - new Date(a.disbursement_date)).map(app => (
+                                            <tr key={app.application_id}>
+                                                <td style={{ whiteSpace: 'nowrap' }}>{app.disbursement_date ? new Date(app.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                                <td>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</td>
+                                                <td>{app.car_make} {app.car_model} {app.car_year}</td>
+                                                <td>{app.seller?.business_name}</td>
+                                                <td style={{ textTransform: 'capitalize' }}>{(app.disbursement_method || '—').replace(/_/g, ' ')}</td>
+                                                <td><code style={{ fontSize: '12px' }}>{app.disbursement_reference || '—'}</code></td>
+                                                <td>TZS {parseFloat(app.loan_amount || 0).toLocaleString()}</td>
+                                                <td style={{ color: '#d97706' }}>TZS {parseFloat(app.platform_fee_amount || parseFloat(app.loan_amount || 0) * PLATFORM_FEE_RATE).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                                <td><strong style={{ color: '#065f46' }}>TZS {parseFloat(app.disbursement_amount || app.loan_amount || 0).toLocaleString()}</strong></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            );
+        })()}
+    </>
+)}
+
+{view === 'commission' && (
+    <>
+        <div className="card-header">
+            <h1 className="card-title">Commission Breakdown</h1>
+            <p className="card-subtitle">Platform fees and your earnings per disbursed loan</p>
+        </div>
+        {(() => {
+            const disbursed = applications.filter(a => a.status === 'disbursed');
+            const totalLoans = disbursed.reduce((s, a) => s + parseFloat(a.loan_amount || 0), 0);
+            const totalPlatformFee = disbursed.reduce((s, a) => s + parseFloat(a.platform_fee_amount || (parseFloat(a.loan_amount) || 0) * PLATFORM_FEE_RATE), 0);
+            const totalProcessingFees = disbursed.reduce((s, a) => s + parseFloat(a.processing_fee || 0), 0);
+            const totalInterestIncome = disbursed.reduce((s, a) => s + parseFloat(a.total_interest || 0), 0);
+            return (
+                <>
+                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+                        <div className="stat-card">
+                            <div className="stat-label">Total Loan Book</div>
+                            <div className="stat-value">{(totalLoans / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS disbursed</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Processing Fees Collected</div>
+                            <div className="stat-value">{(totalProcessingFees / 1000).toFixed(0)}K</div>
+                            <div className="stat-change">TZS</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Est. Interest Income</div>
+                            <div className="stat-value">{(totalInterestIncome / 1000000).toFixed(1)}M</div>
+                            <div className="stat-change">TZS (full term)</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Platform Fees Paid</div>
+                            <div className="stat-value">{(totalPlatformFee / 1000).toFixed(0)}K</div>
+                            <div className="stat-change">TZS (0.5%)</div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        <h3 className="card-title" style={{ marginBottom: '1rem' }}>Per-Loan Breakdown</h3>
+                        {disbursed.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursed loans yet.</p>
+                        ) : (
+                            <div className="table-scroll">
+                                <table className="comparison-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Buyer</th>
+                                            <th>Car</th>
+                                            <th>Loan Amount</th>
+                                            <th>Rate</th>
+                                            <th>Processing Fee</th>
+                                            <th>Est. Interest</th>
+                                            <th>Platform Fee</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {disbursed.sort((a,b) => new Date(b.disbursement_date) - new Date(a.disbursement_date)).map(app => {
+                                            const loan = parseFloat(app.loan_amount || 0);
+                                            const platFee = parseFloat(app.platform_fee_amount || loan * PLATFORM_FEE_RATE);
+                                            return (
+                                                <tr key={app.application_id}>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>{app.disbursement_date ? new Date(app.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                                    <td>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</td>
+                                                    <td>{app.car_make} {app.car_model} {app.car_year}</td>
+                                                    <td>TZS {loan.toLocaleString()}</td>
+                                                    <td>{app.interest_rate}%</td>
+                                                    <td>TZS {parseFloat(app.processing_fee || 0).toLocaleString()}</td>
+                                                    <td>TZS {parseFloat(app.total_interest || 0).toLocaleString()}</td>
+                                                    <td style={{ color: '#dc2626' }}>TZS {platFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            );
+        })()}
+    </>
+)}
+
 {view === 'applications' && (
     <>
         <div className="card-header">
@@ -3626,7 +4703,7 @@ function BankDashboard() {
             <p className="card-subtitle">Manage loan applications</p>
         </div>
 
-        <ApplicationsView 
+        <ApplicationsView
             applications={applications}
             loading={loading}
             onSelectApplication={setSelectedApplication}
@@ -3781,19 +4858,19 @@ function BankDashboard() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Car Price:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                TZS {parseFloat(selectedApplication.car_price).toLocaleString()}
+                                                TZS {(parseFloat(selectedApplication.car_price) || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Down Payment:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                TZS {parseFloat(selectedApplication.down_payment).toLocaleString()}
+                                                TZS {(parseFloat(selectedApplication.down_payment) || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Loan Amount:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                <strong>TZS {parseFloat(selectedApplication.loan_amount).toLocaleString()}</strong>
+                                                <strong>TZS {(parseFloat(selectedApplication.loan_amount) || 0).toLocaleString()}</strong>
                                             </td>
                                         </tr>
                                         <tr>
@@ -3807,7 +4884,7 @@ function BankDashboard() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Monthly Payment:</td>
                                             <td style={{ padding: '0.5rem' }}>
-                                                <strong>TZS {parseFloat(selectedApplication.monthly_payment).toLocaleString()}</strong>
+                                                <strong>TZS {(parseFloat(selectedApplication.monthly_payment) || 0).toLocaleString()}</strong>
                                             </td>
                                         </tr>
                                         <tr>
@@ -4051,7 +5128,7 @@ function AddCarModal({ car, onClose, onSuccess }) {
             onSuccess();
         } catch (error) {
             console.error('Error saving car:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setLoading(false);
         }
@@ -4523,7 +5600,7 @@ function PaymentSettings() {
             alert('✅ Payment details saved successfully!');
         } catch (error) {
             console.error('Error saving payment info:', error);
-            alert('❌ Error: ' + error.message);
+            alert('❌ Error: ' + (error?.message || 'Please try again'));
         } finally {
             setSaving(false);
         }
@@ -4771,7 +5848,8 @@ function SellerDashboard() {
                     inspection_scheduled_date,
                     inspection_status,
                     inspection_report,
-                    car:cars!car_id(make, model, year),
+                    car_price,
+                    car:cars!car_id(make, model, year, color, mileage, transmission, fuel_type, body_type, location_city),
                     buyer:buyers!buyer_id(
                         user:users!buyers_user_id_fkey(first_name, last_name)
                     )
@@ -4868,7 +5946,10 @@ function SellerDashboard() {
 
     return (
         <>
-            <Sidebar userType="seller" activeView={view} onNavigate={setView} />
+            <Sidebar userType="seller" activeView={view} onNavigate={(id) => {
+                if (id === 'add-car') { handleAddCar(); }
+                else { setView(id); }
+            }} />
             <div className="main-content">
                 {view === 'dashboard' && (
                     <>
@@ -4982,18 +6063,28 @@ function SellerDashboard() {
                                                     ? new Date(insp.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
                                                     : 'TBD';
                                                 const inspector = insp.inspection_report?.inspector_name;
+                                                const car = insp.car;
                                                 return (
-                                                    <div key={insp.application_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#f0f6ff', borderRadius: '8px', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                        <div>
-                                                            <strong>{insp.car?.make} {insp.car?.model} {insp.car?.year}</strong>
-                                                            <div style={{ fontSize: '0.875rem', color: '#525252', marginTop: '0.15rem' }}>
-                                                                Buyer: {insp.buyer?.user?.first_name} {insp.buyer?.user?.last_name}
-                                                                {inspector && <span> · Inspector: {inspector}</span>}
+                                                    <div key={insp.application_id} style={{ padding: '0.875rem 1rem', background: '#f0f6ff', borderRadius: '8px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                            <div>
+                                                                <strong>{car?.make} {car?.model} {car?.year}</strong>
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem 0.75rem', fontSize: '0.8125rem', color: '#525252', marginTop: '0.25rem' }}>
+                                                                    {car?.color && <span>Colour: {car.color}</span>}
+                                                                    {car?.mileage && <span>Mileage: {car.mileage.toLocaleString()} km</span>}
+                                                                    {car?.transmission && <span>{car.transmission}</span>}
+                                                                    {car?.fuel_type && <span>{car.fuel_type}</span>}
+                                                                    {car?.location_city && <span>{car.location_city}</span>}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.8125rem', color: '#525252', marginTop: '0.2rem' }}>
+                                                                    Buyer: {insp.buyer?.user?.first_name} {insp.buyer?.user?.last_name}
+                                                                    {inspector && <> · Inspector: {inspector}</>}
+                                                                </div>
                                                             </div>
+                                                            <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                                {dt}
+                                                            </span>
                                                         </div>
-                                                        <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                                            {dt}
-                                                        </span>
                                                     </div>
                                                 );
                                             })}
@@ -5094,6 +6185,84 @@ function SellerDashboard() {
                                     )}
                                 </div>
                             </>
+                        )}
+                    </>
+                )}
+
+                {view === 'cars' && (
+                    <>
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h1 className="card-title">My Cars</h1>
+                                <p className="card-subtitle">{cars.length} listing{cars.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            <button className="btn btn-primary" onClick={handleAddCar}>+ Add New Car</button>
+                        </div>
+
+                        {cars.length === 0 ? (
+                            <div className="card" style={{ textAlign: 'center', padding: '3rem', color: '#6c757d' }}>
+                                <p>No cars listed yet.</p>
+                                <button className="btn btn-primary" onClick={handleAddCar} style={{ marginTop: '1rem' }}>
+                                    + Add Your First Car
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="cars-grid">
+                                {cars.map(car => (
+                                    <div key={car.car_id} className="car-card">
+                                        <div
+                                            className="car-image"
+                                            style={{
+                                                backgroundImage: car.images && car.images.length > 0 ? `url(${car.images[0]})` : 'none',
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            {(!car.images || car.images.length === 0) && '🚗'}
+                                            <span className="car-badge" style={{
+                                                background: car.status === 'available' ? '#24a148' :
+                                                            car.status === 'reserved' ? '#f59e0b' :
+                                                            car.status === 'sold' ? '#dc3545' :
+                                                            car.status === 'draft' ? '#6c757d' : '#667eea'
+                                            }}>{car.status}</span>
+                                            {car.is_featured && (
+                                                <span style={{
+                                                    position: 'absolute', top: '8px', left: '8px',
+                                                    background: '#f59e0b', color: 'white',
+                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600'
+                                                }}>Featured</span>
+                                            )}
+                                        </div>
+                                        <div className="car-details">
+                                            <h3 className="car-title">{car.year} {car.make} {car.model}</h3>
+                                            <div className="car-price">TZS {car.price?.toLocaleString()}</div>
+                                            <div className="car-specs">
+                                                <span className="spec-item">{car.location_city}</span>
+                                                <span className="spec-item">{car.views_count || 0} views</span>
+                                            </div>
+                                            <div style={{ marginTop: '0.75rem' }}>
+                                                <label style={{ fontSize: '12px', color: '#6c757d', display: 'block', marginBottom: '4px' }}>Status</label>
+                                                <select
+                                                    value={car.status}
+                                                    onChange={(e) => handleStatusChange(car.car_id, e.target.value)}
+                                                    style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid #dee2e6', fontSize: '13px' }}
+                                                >
+                                                    <option value="available">Available</option>
+                                                    <option value="reserved">Reserved</option>
+                                                    <option value="sold">Sold</option>
+                                                    <option value="draft">Draft</option>
+                                                    <option value="inactive">Inactive</option>
+                                                </select>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                                <button className="btn btn-sm btn-outline" onClick={() => handleEditCar(car)}>Edit</button>
+                                                <button className="btn btn-sm btn-outline" onClick={() => handleDeleteCar(car.car_id)} style={{ color: '#dc3545' }}>Delete</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </>
                 )}
@@ -5338,7 +6507,7 @@ function ProtectedRoute({ children, allowedUserType }) {
     }
 
     // Check user type if specified
-    if (allowedUserType && user.user_metadata.user_type !== allowedUserType) {
+    if (allowedUserType && user?.user_metadata?.user_type !== allowedUserType) {
         return <Navigate to="/login" />;
     }
 

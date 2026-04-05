@@ -45,10 +45,91 @@ const HOW_IT_WORKS = [
     }
 ];
 
+const MAKES = ['Toyota', 'Nissan', 'Honda', 'Mitsubishi', 'Mercedes-Benz', 'BMW', 'Mazda', 'Subaru', 'Volkswagen', 'Hyundai', 'Kia', 'Suzuki', 'Land Rover', 'Ford', 'Isuzu', 'Peugeot', 'Audi'];
+
+function calcMonthly(price) {
+    // 100% financing, 15% annual, 60 months (5 years)
+    const r = 0.15 / 12;
+    const n = 60;
+    return Math.round(price * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
+}
+
+function HeroSlider({ height }) {
+    const [slides, setSlides] = useState([]);
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        supabase.from('hero_slides').select('*').eq('is_active', true).order('sort_order')
+            .then(({ data }) => { if (data && data.length > 0) setSlides(data); });
+    }, []);
+
+    useEffect(() => {
+        if (slides.length === 0) return;
+        const timer = setInterval(() => setCurrent(c => (c + 1) % slides.length), 5000);
+        return () => clearInterval(timer);
+    }, [slides.length]);
+
+    if (slides.length === 0) return <div style={{ width: '100%', height: height || '488px', borderRadius: '12px', background: '#1a3a6b' }} />;
+
+    const slide = slides[current];
+
+    return (
+        <div style={{
+            position: 'relative', width: '100%', height: height || '100%',
+            backgroundImage: `url(${slide.image_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transition: 'background-image 0.5s ease',
+            borderRadius: '12px',
+            overflow: 'hidden',
+        }}>
+            {/* Top gradient + text overlay (for slides without baked-in text) */}
+            {slide.title && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)',
+                    padding: '1.25rem 1.5rem',
+                }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', lineHeight: 1.3, marginBottom: '0.375rem', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                        {slide.title}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500, textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+                        {slide.subtitle}
+                    </div>
+                </div>
+            )}
+
+            {/* Subtle bottom gradient so dots are visible */}
+            <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
+                pointerEvents: 'none',
+            }} />
+
+            {/* Dot indicators */}
+            <div style={{
+                position: 'absolute', bottom: '14px', left: 0, right: 0,
+                display: 'flex', justifyContent: 'center', gap: '0.5rem',
+            }}>
+                {slides.map((_, i) => (
+                    <div key={i} onClick={() => setCurrent(i)} style={{
+                        width: i === current ? '24px' : '8px', height: '8px',
+                        borderRadius: '4px',
+                        background: i === current ? (slide.accent || '#f0a500') : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer', transition: 'all 0.3s ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                    }} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function PublicHomePage() {
-    const [search, setSearch] = useState('');
     const [featuredCars, setFeaturedCars] = useState([]);
     const [stats, setStats] = useState({ cars: 0, banks: 0, applications: 0 });
+    const [showMonthly, setShowMonthly] = useState(false);
+    const [heroFilters, setHeroFilters] = useState({ make: '', model: '', minYear: '', maxYear: '', minVal: '', maxVal: '' });
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -57,122 +138,193 @@ function PublicHomePage() {
     }, []);
 
     const fetchFeaturedCars = async () => {
-        const { data } = await supabase
-            .from('cars')
-            .select('car_id, make, model, year, price, mileage, location_city, images, condition, is_featured, body_type')
-            .eq('status', 'available')
-            .order('is_featured', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(6);
-        setFeaturedCars(data || []);
+        try {
+            const { data } = await supabase
+                .from('cars')
+                .select('car_id, make, model, year, price, mileage, location_city, images, condition, is_featured, body_type')
+                .eq('status', 'available')
+                .order('is_featured', { ascending: false })
+                .order('created_at', { ascending: false })
+                .limit(6);
+            setFeaturedCars(data || []);
+        } catch (error) {
+            console.error('Error fetching featured cars:', error);
+            setFeaturedCars([]);
+        }
     };
 
     const fetchStats = async () => {
-        const [{ count: cars }, { count: banks }, { count: apps }] = await Promise.all([
-            supabase.from('cars').select('*', { count: 'exact', head: true }).eq('status', 'available'),
-            supabase.from('banks').select('*', { count: 'exact', head: true }).eq('is_active', true),
-            supabase.from('loan_applications').select('*', { count: 'exact', head: true })
-        ]);
-        setStats({ cars: cars || 0, banks: banks || 0, applications: apps || 0 });
+        try {
+            const [{ count: cars }, { count: banks }, { count: apps }] = await Promise.all([
+                supabase.from('cars').select('*', { count: 'exact', head: true }).eq('status', 'available'),
+                supabase.from('banks').select('*', { count: 'exact', head: true }).eq('is_active', true),
+                supabase.from('loan_applications').select('*', { count: 'exact', head: true })
+            ]);
+            setStats({ cars: cars || 0, banks: banks || 0, applications: apps || 0 });
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+            setStats({ cars: 0, banks: 0, applications: 0 });
+        }
     };
 
-    const handleSearch = (e) => {
+    const handleHeroSearch = (e) => {
         e.preventDefault();
-        navigate(`/cars${search ? `?search=${encodeURIComponent(search)}` : ''}`);
+        const params = new URLSearchParams();
+        if (heroFilters.make) params.set('make', heroFilters.make);
+        if (heroFilters.model) params.set('model', heroFilters.model);
+        if (heroFilters.minYear) params.set('minYear', heroFilters.minYear);
+        if (heroFilters.maxYear) params.set('maxYear', heroFilters.maxYear);
+        if (heroFilters.minVal) params.set(showMonthly ? 'minMonthly' : 'minPrice', heroFilters.minVal);
+        if (heroFilters.maxVal) params.set(showMonthly ? 'maxMonthly' : 'maxPrice', heroFilters.maxVal);
+        navigate(`/cars${params.toString() ? '?' + params.toString() : ''}`);
     };
 
     return (
         <div style={{ background: '#f4f4f4', minHeight: '100vh' }}>
             <PublicNav />
 
-            {/* HERO */}
+            {/* HERO — two-column CarDuka style */}
             <section style={{
-                background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 50%, #001d9c 100%)',
-                padding: '5rem 2rem 6rem',
-                color: 'white',
-                textAlign: 'center',
-                position: 'relative',
-                overflow: 'hidden'
+                background: 'linear-gradient(135deg, #0f1b35 0%, #0f62fe 100%)',
+                height: '520px',
+                display: 'flex',
+                alignItems: 'stretch',
+                overflow: 'hidden',
             }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '1rem' }}>
-                        Tanzania's #1 Auto Finance Platform
-                    </div>
-                    <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1.5rem' }}>
-                        Find Your Dream Car.<br />Finance It in Minutes.
-                    </h1>
-                    <p style={{ fontSize: '1.125rem', opacity: 0.9, marginBottom: '2.5rem', maxWidth: '560px', margin: '0 auto 2.5rem' }}>
-                        Browse thousands of verified cars and compare financing from Tanzania's top banks — all in one place.
-                    </p>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '1rem 4rem', alignItems: 'start' }}>
 
-                    {/* Search Bar */}
-                    <form onSubmit={handleSearch} style={{ display: 'flex', maxWidth: '600px', margin: '0 auto', gap: '0.5rem' }}>
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by make, model, or location..."
-                            style={{
-                                flex: 1,
-                                padding: '1rem 1.25rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                            }}
-                        />
-                        <button type="submit" style={{
-                            background: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            padding: '1rem 1.75rem',
-                            borderRadius: '4px',
-                            fontWeight: 700,
-                            fontSize: '1rem',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            Search Cars
-                        </button>
-                    </form>
+                    {/* LEFT — search & headline */}
+                    <div style={{ padding: '1.5rem 2rem 1.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500', marginBottom: '0.5rem' }}>
+                            Tanzania's #1 Auto Finance Platform
+                        </div>
+                        <h1 style={{ fontSize: '0.875rem', fontWeight: 900, lineHeight: 1.3, marginBottom: '0.375rem', whiteSpace: 'nowrap' }}>
+                            Buy &amp; Sell Cars — Fast &amp; Affordable
+                        </h1>
+                        <p style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '0.75rem', lineHeight: 1.6 }}>
+                            Compare loans from Tanzania's top banks and drive away faster.
+                        </p>
 
-                    <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', opacity: 0.8, fontSize: '0.875rem' }}>
-                        <span>🚗 Toyota</span>
-                        <span>🚗 BMW</span>
-                        <span>🚗 Mercedes</span>
-                        <span>🚗 Honda</span>
-                        <span>🚗 Nissan</span>
+                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.375rem', maxWidth: '460px' }}>
+
+                            {/* Brand & Model */}
+                            <div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Brand &amp; Model</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                                    <select value={heroFilters.make} onChange={e => setHeroFilters({...heroFilters, make: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
+                                        <option value="">Make</option>
+                                        {MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                    <select value={heroFilters.model} onChange={e => setHeroFilters({...heroFilters, model: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
+                                        <option value="">Model</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Year of Manufacture */}
+                            <div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Year of Manufacture</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                                    <input type="number" placeholder="Min Year" value={heroFilters.minYear}
+                                        onChange={e => setHeroFilters({...heroFilters, minYear: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                    <input type="number" placeholder="Max Year" value={heroFilters.maxYear}
+                                        onChange={e => setHeroFilters({...heroFilters, maxYear: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                </div>
+                            </div>
+
+                            {/* Price in TZS */}
+                            <div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Price in TZS</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '6px', padding: '0.375rem 0.625rem', marginBottom: '0.375rem' }}>
+                                    <div>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0a500' }}>Show Monthly Payment</div>
+                                        <div style={{ fontSize: '0.6875rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
+                                    </div>
+                                    <div onClick={() => setShowMonthly(!showMonthly)} style={{
+                                        width: '40px', height: '22px', borderRadius: '11px', cursor: 'pointer',
+                                        background: showMonthly ? '#f0a500' : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute', top: '3px', left: showMonthly ? '21px' : '3px',
+                                            width: '16px', height: '16px', borderRadius: '50%', background: 'white',
+                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                        }} />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Min' : 'Min Price (TZS)'}
+                                        value={heroFilters.minVal} onChange={e => setHeroFilters({...heroFilters, minVal: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Max' : 'Max Price (TZS)'}
+                                        value={heroFilters.maxVal} onChange={e => setHeroFilters({...heroFilters, maxVal: e.target.value})}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                </div>
+                            </div>
+
+                            <button type="submit" style={{
+                                background: '#f0a500', color: 'white', border: 'none',
+                                padding: '0.625rem', borderRadius: '50px', fontWeight: 700,
+                                fontSize: '0.9375rem', cursor: 'pointer', width: '100%', marginTop: '0.125rem'
+                            }}>Search Filtered Cars</button>
+                            <button type="button" onClick={() => navigate('/cars')} style={{
+                                background: '#0f1b35', color: 'white', border: 'none',
+                                padding: '0.625rem', borderRadius: '50px', fontWeight: 600,
+                                fontSize: '0.875rem', cursor: 'pointer', width: '100%'
+                            }}>View All Cars</button>
+                        </form>
                     </div>
+
+                    {/* RIGHT — full bleed slider, image IS the panel */}
+                    <HeroSlider height="488px" />
                 </div>
             </section>
 
-            {/* STATS BAR */}
-            <section style={{ background: 'white', padding: '2rem', borderBottom: '1px solid #e0e0e0' }}>
-                <div style={{
-                    maxWidth: '900px',
-                    margin: '0 auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '2rem',
-                    textAlign: 'center'
-                }}>
-                    {[
-                        { value: `${stats.cars}+`, label: 'Cars Available', icon: '🚗' },
-                        { value: `${stats.banks}+`, label: 'Partner Banks', icon: '🏦' },
-                        { value: `${stats.applications}+`, label: 'Applications Processed', icon: '📋' }
-                    ].map((stat, i) => (
-                        <div key={i}>
-                            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{stat.icon}</div>
-                            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f62fe' }}>{stat.value}</div>
-                            <div style={{ color: '#6f6f6f', fontSize: '0.9375rem', fontWeight: 500 }}>{stat.label}</div>
-                        </div>
-                    ))}
+            {/* WHAT ARE YOU LOOKING FOR — car categories */}
+            <section style={{ background: 'white', borderBottom: '1px solid #e0e0e0' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.75rem 4rem' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#161616', marginBottom: '1rem' }}>What are you looking for?</h3>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        {[
+                            { icon: '🚙', label: 'SUV' },
+                            { icon: '🚗', label: 'Sedan' },
+                            { icon: '🛻', label: 'Pickup' },
+                            { icon: '🚐', label: 'Minivan' },
+                            { icon: '🏎️', label: 'Sports' },
+                            { icon: '🚌', label: 'Bus' },
+                            { icon: '🚚', label: 'Truck' },
+                            { icon: '⚡', label: 'Electric' },
+                        ].map((cat) => (
+                            <button key={cat.label} onClick={() => navigate(`/cars?type=${cat.label.toLowerCase()}`)} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1.25rem', borderRadius: '20px',
+                                border: '1px solid #e0e0e0', background: 'white',
+                                fontSize: '0.875rem', fontWeight: 600, color: '#161616',
+                                cursor: 'pointer', transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#0f62fe'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#0f62fe'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#161616'; e.currentTarget.style.borderColor = '#e0e0e0'; }}
+                            >
+                                <span>{cat.icon}</span> {cat.label}
+                            </button>
+                        ))}
+                        <button onClick={() => navigate('/cars')} style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.5rem 1.25rem', borderRadius: '20px',
+                            border: '1px solid #f0a500', background: '#f0a500',
+                            fontSize: '0.875rem', fontWeight: 600, color: 'white', cursor: 'pointer',
+                        }}>
+                            View All →
+                        </button>
+                    </div>
                 </div>
             </section>
 
             {/* FEATURED CARS */}
-            <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 2rem' }}>
+            <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 4rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2rem' }}>
                     <div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>Featured Cars</h2>
@@ -188,54 +340,56 @@ function PublicHomePage() {
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                         {featuredCars.map(car => (
-                            <div
-                                key={car.car_id}
-                                onClick={() => navigate(`/cars/${car.car_id}`)}
-                                style={{
-                                    background: 'white',
-                                    borderRadius: '8px',
-                                    overflow: 'hidden',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.25s ease'
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
+                            <div key={car.car_id} style={{
+                                background: 'white', borderRadius: '8px', overflow: 'hidden',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.08)', transition: 'all 0.25s ease'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; }}
                             >
+                                {/* Image */}
                                 <div style={{
-                                    width: '100%',
-                                    height: '200px',
+                                    width: '100%', height: '190px',
                                     background: car.images?.[0] ? `url(${car.images[0]}) center/cover no-repeat` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '4rem',
-                                    position: 'relative'
-                                }}>
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '4rem', position: 'relative', cursor: 'pointer'
+                                }} onClick={() => navigate(`/cars/${car.car_id}`)}>
                                     {!car.images?.[0] && '🚗'}
                                     {car.is_featured && (
-                                        <span style={{
-                                            position: 'absolute', top: '0.75rem', left: '0.75rem',
-                                            background: '#f59e0b', color: 'white',
-                                            padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700
-                                        }}>⭐ Featured</span>
+                                        <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', background: '#f0a500', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>⭐ Featured</span>
                                     )}
-                                    <span style={{
-                                        position: 'absolute', top: '0.75rem', right: '0.75rem',
-                                        background: '#24a148', color: 'white',
-                                        padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600
-                                    }}>{car.condition === 'certified_pre_owned' ? 'CPO' : car.condition}</span>
+                                    <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'rgba(0,0,0,0.55)', color: 'white', padding: '2px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                        {car.condition === 'certified_pre_owned' ? 'CPO' : car.condition}
+                                    </span>
                                 </div>
-                                <div style={{ padding: '1.25rem' }}>
-                                    <h3 style={{ fontWeight: 700, fontSize: '1.0625rem', marginBottom: '0.5rem' }}>
+                                {/* Details */}
+                                <div style={{ padding: '1rem' }}>
+                                    <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem', color: '#161616', cursor: 'pointer' }} onClick={() => navigate(`/cars/${car.car_id}`)}>
                                         {car.year} {car.make} {car.model}
                                     </h3>
-                                    <div style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0f62fe', marginBottom: '0.75rem' }}>
-                                        TZS {car.price?.toLocaleString()}
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f0a500' }}>
+                                        TZS {calcMonthly(car.price).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#8d8d8d' }}>/ per month for 5 years</span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '1rem', color: '#6f6f6f', fontSize: '0.8125rem' }}>
-                                        <span>📍 {car.location_city}</span>
+                                    <div style={{ fontSize: '0.8125rem', color: '#6f6f6f', marginBottom: '0.625rem' }}>
+                                        TZS {car.price?.toLocaleString()} cash
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.75rem', color: '#6f6f6f', fontSize: '0.8rem', marginBottom: '0.875rem', flexWrap: 'wrap' }}>
                                         <span>🏎️ {car.mileage?.toLocaleString()} km</span>
+                                        <span>⚙️ {car.transmission}</span>
+                                        <span>⛽ {car.fuel_type}</span>
+                                        <span>📍 {car.location_city}</span>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                        <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
+                                            background: '#f0a500', color: 'white', border: 'none',
+                                            padding: '0.625rem', borderRadius: '4px', fontWeight: 700,
+                                            fontSize: '0.8125rem', cursor: 'pointer'
+                                        }}>Car Financing</button>
+                                        <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
+                                            background: 'white', color: '#161616', border: '1px solid #e0e0e0',
+                                            padding: '0.625rem', borderRadius: '4px', fontWeight: 600,
+                                            fontSize: '0.8125rem', cursor: 'pointer'
+                                        }}>Cash Purchase</button>
                                     </div>
                                 </div>
                             </div>
@@ -255,7 +409,7 @@ function PublicHomePage() {
             </section>
 
             {/* HOW IT WORKS */}
-            <section style={{ background: 'white', padding: '5rem 2rem' }}>
+            <section style={{ background: 'white', padding: '5rem 4rem' }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>How AutoFinance Works</h2>
@@ -289,7 +443,7 @@ function PublicHomePage() {
             </section>
 
             {/* TRUST INDICATORS */}
-            <section style={{ background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 100%)', padding: '4rem 2rem', color: 'white' }}>
+            <section style={{ background: 'linear-gradient(135deg, #0f62fe 0%, #0043ce 100%)', padding: '4rem 4rem', color: 'white' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>
                         Trusted by Thousands of Tanzanians
@@ -313,7 +467,7 @@ function PublicHomePage() {
             </section>
 
             {/* TESTIMONIALS */}
-            <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 2rem' }}>
+            <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 4rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616' }}>What Our Customers Say</h2>
                 </div>
@@ -345,7 +499,7 @@ function PublicHomePage() {
             </section>
 
             {/* CTA BANNER */}
-            <section style={{ background: '#f4f4f4', padding: '4rem 2rem', textAlign: 'center' }}>
+            <section style={{ background: '#f4f4f4', padding: '4rem 4rem', textAlign: 'center' }}>
                 <div style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#161616', marginBottom: '1rem' }}>
                         Ready to Find Your Car?
@@ -371,7 +525,7 @@ function PublicHomePage() {
             </section>
 
             {/* FOOTER */}
-            <footer style={{ background: '#161616', color: '#c6c6c6', padding: '3rem 2rem 2rem' }}>
+            <footer style={{ background: '#161616', color: '#c6c6c6', padding: '3rem 4rem 2rem' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
                         <div>

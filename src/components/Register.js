@@ -195,7 +195,7 @@ function Register() {
             
         } catch (error) {
             console.error('❌ Registration error:', error);
-            setMessage('❌ Error: ' + error.message);
+            setMessage('❌ Error: ' + (error?.message || error?.toString() || 'An unexpected error occurred'));
         } finally {
             setLoading(false);
         }

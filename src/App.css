@@ -1,20 +1,55 @@
 :root {
+    /* Brand / Primary */
     --primary: #0f62fe;
     --primary-dark: #0043ce;
     --primary-light: #4589ff;
     --secondary: #6f6f6f;
+
+    /* Tanzania-inspired accents */
+    --accent-gold: #f0a500;
+    --accent-gold-light: #fef3d0;
+    --accent-green: #1eb53a;
+    --accent-green-light: #d1f4e0;
+
+    /* Semantic */
     --success: #24a148;
     --warning: #f1c21b;
     --danger: #da1e28;
+
+    /* Surfaces */
     --bg-main: #f4f4f4;
     --bg-card: #ffffff;
+    --bg-stripe: #fafafa;
+
+    /* Text */
     --text-primary: #161616;
     --text-secondary: #525252;
     --text-muted: #8d8d8d;
+
+    /* Borders & Shadows */
     --border: #e0e0e0;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
     --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+
+    /* Spacing scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+
+    /* Border radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
 }
 
 * {
@@ -706,4 +741,157 @@ body {
     background-color: #f8f9ff !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+}
+
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.spinner-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.spinner-lg {
+    width: 40px;
+    height: 40px;
+    border-width: 4px;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+}
+
+/* ============================================
+   STRIPED TABLES
+   ============================================ */
+.table-striped tbody tr:nth-child(odd) {
+    background: var(--bg-stripe);
+}
+
+.table-striped tbody tr:nth-child(even) {
+    background: var(--bg-card);
+}
+
+.table-striped tbody tr:hover {
+    background: #eef4ff;
+}
+
+/* ============================================
+   FORM ERROR / VALIDATION STATES
+   ============================================ */
+.form-input.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(218, 30, 40, 0.1);
+}
+
+.form-input.is-invalid:focus,
+.form-select.is-invalid:focus {
+    outline: none;
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(218, 30, 40, 0.15);
+}
+
+.form-input.is-valid,
+.form-select.is-valid {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(36, 161, 72, 0.08);
+}
+
+.form-error-text {
+    display: block;
+    color: var(--danger);
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.form-error-text::before {
+    content: '⚠';
+    font-size: 0.75rem;
+}
+
+.form-hint {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+}
+
+/* Alert / inline error banner */
+.alert {
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.alert-danger {
+    background: #fff0f0;
+    color: var(--danger);
+    border: 1px solid #ffb3b8;
+}
+
+.alert-success {
+    background: var(--accent-green-light);
+    color: #0a5c20;
+    border: 1px solid #82e09a;
+}
+
+.alert-warning {
+    background: var(--accent-gold-light);
+    color: #7a4f00;
+    border: 1px solid #fcd116;
+}
+
+.alert-info {
+    background: #e5f6ff;
+    color: #004d73;
+    border: 1px solid #bae6ff;
+}
+
+/* ============================================
+   TANZANIA ACCENT UTILITIES
+   ============================================ */
+.badge-gold {
+    background: var(--accent-gold-light);
+    color: #7a4f00;
+}
+
+.accent-border-gold {
+    border-left: 4px solid var(--accent-gold);
+}
+
+.accent-border-green {
+    border-left: 4px solid var(--accent-green);
 }

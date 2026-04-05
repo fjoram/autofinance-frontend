@@ -34,7 +34,7 @@ function Login() {
             if (authError) throw authError;
 
             // Get user type from metadata
-            const userType = authData.user.user_metadata.user_type;
+            const userType = authData.user?.user_metadata?.user_type;
 
             // Redirect to appropriate dashboard
             if (userType === 'buyer') {
