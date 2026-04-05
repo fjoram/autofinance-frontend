@@ -177,8 +177,8 @@ function PublicHomePage() {
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500', marginBottom: '0.5rem' }}>
                             Tanzania's #1 Auto Finance Platform
                         </div>
-                        <h1 style={{ fontSize: '0.75rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '0.375rem' }}>
-                            Buy & Sell Cars with<br />Fast &amp; Affordable Financing
+                        <h1 style={{ fontSize: '0.875rem', fontWeight: 900, lineHeight: 1.3, marginBottom: '0.375rem', whiteSpace: 'nowrap' }}>
+                            Buy &amp; Sell Cars with Fast &amp; Affordable Financing
                         </h1>
                         <p style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '0.75rem', lineHeight: 1.6 }}>
                             Compare loans from Tanzania's top banks and drive away faster.
