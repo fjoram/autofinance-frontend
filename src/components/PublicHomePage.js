@@ -177,26 +177,26 @@ function PublicHomePage() {
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500', marginBottom: '0.5rem' }}>
                             Tanzania's #1 Auto Finance Platform
                         </div>
-                        <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, lineHeight: 1.2, marginBottom: '0.75rem' }}>
+                        <h1 style={{ fontSize: 'clamp(1.1rem, 2.2vw, 1.6rem)', fontWeight: 900, lineHeight: 1.2, marginBottom: '0.375rem' }}>
                             Buy & Sell Cars with<br />Fast &amp; Affordable Financing
                         </h1>
                         <p style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '0.75rem', lineHeight: 1.6 }}>
                             Compare loans from Tanzania's top banks and drive away faster.
                         </p>
 
-                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '460px' }}>
+                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.375rem', maxWidth: '460px' }}>
 
                             {/* Brand & Model */}
                             <div>
-                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Brand &amp; Model</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Brand &amp; Model</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
                                     <select value={heroFilters.make} onChange={e => setHeroFilters({...heroFilters, make: e.target.value})}
-                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
                                         <option value="">Make</option>
                                         {MAKES.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
                                     <select value={heroFilters.model} onChange={e => setHeroFilters({...heroFilters, model: e.target.value})}
-                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
                                         <option value="">Model</option>
                                     </select>
                                 </div>
@@ -204,55 +204,55 @@ function PublicHomePage() {
 
                             {/* Year of Manufacture */}
                             <div>
-                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Year of Manufacture</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                    <input type="number" placeholder="Min Year of Manufacture" value={heroFilters.minYear}
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Year of Manufacture</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                                    <input type="number" placeholder="Min Year" value={heroFilters.minYear}
                                         onChange={e => setHeroFilters({...heroFilters, minYear: e.target.value})}
-                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
-                                    <input type="number" placeholder="Max Year of Manufacture" value={heroFilters.maxYear}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                    <input type="number" placeholder="Max Year" value={heroFilters.maxYear}
                                         onChange={e => setHeroFilters({...heroFilters, maxYear: e.target.value})}
-                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
                                 </div>
                             </div>
 
                             {/* Price in TZS */}
                             <div>
-                                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Price in TZS</div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '6px', padding: '0.5rem 0.75rem', marginBottom: '0.5rem' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Price in TZS</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '6px', padding: '0.375rem 0.625rem', marginBottom: '0.375rem' }}>
                                     <div>
-                                        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f0a500' }}>Show Monthly Payment</div>
-                                        <div style={{ fontSize: '0.7rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0a500' }}>Show Monthly Payment</div>
+                                        <div style={{ fontSize: '0.6875rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
                                     </div>
                                     <div onClick={() => setShowMonthly(!showMonthly)} style={{
-                                        width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
+                                        width: '40px', height: '22px', borderRadius: '11px', cursor: 'pointer',
                                         background: showMonthly ? '#f0a500' : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0
                                     }}>
                                         <div style={{
-                                            position: 'absolute', top: '3px', left: showMonthly ? '23px' : '3px',
-                                            width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                            position: 'absolute', top: '3px', left: showMonthly ? '21px' : '3px',
+                                            width: '16px', height: '16px', borderRadius: '50%', background: 'white',
                                             transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                                         }} />
                                     </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                    <input type="number" placeholder={showMonthly ? 'Monthly Min Price' : 'Min Price (TZS)'}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Min' : 'Min Price (TZS)'}
                                         value={heroFilters.minVal} onChange={e => setHeroFilters({...heroFilters, minVal: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
-                                    <input type="number" placeholder={showMonthly ? 'Monthly Max Price' : 'Max Price (TZS)'}
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                    <input type="number" placeholder={showMonthly ? 'Monthly Max' : 'Max Price (TZS)'}
                                         value={heroFilters.maxVal} onChange={e => setHeroFilters({...heroFilters, maxVal: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
+                                        style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
                                 </div>
                             </div>
 
                             <button type="submit" style={{
                                 background: '#f0a500', color: 'white', border: 'none',
-                                padding: '0.875rem', borderRadius: '50px', fontWeight: 700,
-                                fontSize: '1rem', cursor: 'pointer', width: '100%'
+                                padding: '0.625rem', borderRadius: '50px', fontWeight: 700,
+                                fontSize: '0.9375rem', cursor: 'pointer', width: '100%', marginTop: '0.125rem'
                             }}>Search Filtered Cars</button>
                             <button type="button" onClick={() => navigate('/cars')} style={{
                                 background: '#0f1b35', color: 'white', border: 'none',
-                                padding: '0.875rem', borderRadius: '50px', fontWeight: 600,
-                                fontSize: '0.9375rem', cursor: 'pointer', width: '100%'
+                                padding: '0.625rem', borderRadius: '50px', fontWeight: 600,
+                                fontSize: '0.875rem', cursor: 'pointer', width: '100%'
                             }}>View All Cars</button>
                         </form>
                     </div>
