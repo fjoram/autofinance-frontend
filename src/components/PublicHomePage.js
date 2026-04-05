@@ -260,7 +260,7 @@ function PublicHomePage() {
                     </div>
 
                     {/* RIGHT — full bleed slider, image IS the panel */}
-                    <HeroSlider height="480px" />
+                    <HeroSlider height="488px" />
                 </div>
             </section>
 
