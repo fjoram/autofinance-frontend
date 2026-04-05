@@ -77,6 +77,8 @@ function HeroSlider({ height }) {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             transition: 'background-image 0.5s ease',
+            borderRadius: '12px',
+            overflow: 'hidden',
         }}>
             {/* Subtle bottom gradient so dots are visible */}
             <div style={{
@@ -170,7 +172,7 @@ function PublicHomePage() {
                 alignItems: 'stretch',
                 overflow: 'hidden',
             }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '0 4rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '1rem 4rem' }}>
 
                     {/* LEFT — search & headline */}
                     <div style={{ padding: '1.5rem 2rem 1.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
