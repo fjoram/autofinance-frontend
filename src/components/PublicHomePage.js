@@ -165,7 +165,7 @@ function PublicHomePage() {
             {/* HERO — two-column CarDuka style */}
             <section style={{
                 background: 'linear-gradient(135deg, #0f1b35 0%, #0f62fe 100%)',
-                height: '360px',
+                height: '480px',
                 display: 'flex',
                 alignItems: 'stretch',
                 overflow: 'hidden',
@@ -173,7 +173,7 @@ function PublicHomePage() {
                 <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '0 4rem' }}>
 
                     {/* LEFT — search & headline */}
-                    <div style={{ padding: '2.5rem 2rem 2.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
+                    <div style={{ padding: '1.5rem 2rem 1.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#f0a500', marginBottom: '0.5rem' }}>
                             Tanzania's #1 Auto Finance Platform
                         </div>
@@ -184,19 +184,19 @@ function PublicHomePage() {
                             Compare loans from Tanzania's top banks and drive away faster.
                         </p>
 
-                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '460px' }}>
+                        <form onSubmit={handleHeroSearch} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '12px', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '460px' }}>
 
                             {/* Brand & Model */}
                             <div>
                                 <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#525252', marginBottom: '0.375rem' }}>Brand &amp; Model</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                                     <select value={heroFilters.make} onChange={e => setHeroFilters({...heroFilters, make: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.875rem', color: '#161616', background: 'white' }}>
+                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
                                         <option value="">Make</option>
                                         {MAKES.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
                                     <select value={heroFilters.model} onChange={e => setHeroFilters({...heroFilters, model: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.875rem', color: '#161616', background: 'white' }}>
+                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616', background: 'white' }}>
                                         <option value="">Model</option>
                                     </select>
                                 </div>
@@ -208,10 +208,10 @@ function PublicHomePage() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                                     <input type="number" placeholder="Min Year of Manufacture" value={heroFilters.minYear}
                                         onChange={e => setHeroFilters({...heroFilters, minYear: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
                                     <input type="number" placeholder="Max Year of Manufacture" value={heroFilters.maxYear}
                                         onChange={e => setHeroFilters({...heroFilters, maxYear: e.target.value})}
-                                        style={{ padding: '0.625rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
+                                        style={{ padding: '0.5rem 0.625rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem', color: '#161616' }} />
                                 </div>
                             </div>
 
