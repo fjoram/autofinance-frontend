@@ -172,7 +172,7 @@ function PublicHomePage() {
                 alignItems: 'stretch',
                 overflow: 'hidden',
             }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '1rem 4rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '45% 55%', padding: '1rem 4rem', alignItems: 'start' }}>
 
                     {/* LEFT — search & headline */}
                     <div style={{ padding: '1.5rem 2rem 1.5rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
@@ -260,7 +260,7 @@ function PublicHomePage() {
                     </div>
 
                     {/* RIGHT — full bleed slider, image IS the panel */}
-                    <HeroSlider height="100%" />
+                    <HeroSlider height="480px" />
                 </div>
             </section>
 
