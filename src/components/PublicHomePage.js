@@ -165,7 +165,7 @@ function PublicHomePage() {
             {/* HERO — two-column CarDuka style */}
             <section style={{
                 background: 'linear-gradient(135deg, #0f1b35 0%, #0f62fe 100%)',
-                height: '480px',
+                height: '520px',
                 display: 'flex',
                 alignItems: 'stretch',
                 overflow: 'hidden',
@@ -180,7 +180,7 @@ function PublicHomePage() {
                         <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 900, lineHeight: 1.2, marginBottom: '0.75rem' }}>
                             Buy & Sell Cars with<br />Fast &amp; Affordable Financing
                         </h1>
-                        <p style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                        <p style={{ fontSize: '0.875rem', opacity: 0.85, marginBottom: '0.75rem', lineHeight: 1.6 }}>
                             Compare loans from Tanzania's top banks and drive away faster.
                         </p>
 
