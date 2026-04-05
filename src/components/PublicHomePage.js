@@ -55,9 +55,9 @@ function calcMonthly(price) {
 }
 
 const SLIDES = [
-    { img: '/slide1.png', accent: '#f0a500' },
+    { img: '/slide1.png', accent: '#f0a500', title: 'Finance Your Car, Grow Your Business', subtitle: 'Low rates · Quick approvals · Flexible terms' },
     { img: '/slide2.png', accent: '#fcd116' },
-    { img: '/slide3.png', accent: '#42be65' },
+    { img: '/slide3.png', accent: '#0f62fe' },
 ];
 
 function HeroSlider({ height }) {
@@ -80,6 +80,22 @@ function HeroSlider({ height }) {
             borderRadius: '12px',
             overflow: 'hidden',
         }}>
+            {/* Top gradient + text overlay (for slides without baked-in text) */}
+            {slide.title && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)',
+                    padding: '1.25rem 1.5rem',
+                }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', lineHeight: 1.3, marginBottom: '0.375rem', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                        {slide.title}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500, textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+                        {slide.subtitle}
+                    </div>
+                </div>
+            )}
+
             {/* Subtle bottom gradient so dots are visible */}
             <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px',
