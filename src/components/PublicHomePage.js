@@ -56,7 +56,7 @@ function calcMonthly(price) {
 
 const SLIDES = [
     { img: '/slide1.png', accent: '#f0a500', title: 'Finance Your Car, Grow Your Business', subtitle: 'Low rates · Quick approvals · Flexible terms' },
-    { img: '/slide2.png', accent: '#fcd116' },
+    { img: '/slide2.png', accent: '#fcd116', title: 'Drive Your Dream Car Today', subtitle: 'Fast approvals · 100% financing · Tanzania-wide' },
     { img: '/slide3.png', accent: '#0f62fe' },
 ];
 
