@@ -122,7 +122,7 @@ function HeroSlider({ height }) {
 function PublicHomePage() {
     const [featuredCars, setFeaturedCars] = useState([]);
     const [stats, setStats] = useState({ cars: 0, banks: 0, applications: 0 });
-    const [showMonthly, setShowMonthly] = useState(false);
+
     const [heroFilters, setHeroFilters] = useState({ make: '', model: '', minYear: '', maxYear: '', minVal: '', maxVal: '' });
     const navigate = useNavigate();
 
@@ -168,8 +168,8 @@ function PublicHomePage() {
         if (heroFilters.model) params.set('model', heroFilters.model);
         if (heroFilters.minYear) params.set('minYear', heroFilters.minYear);
         if (heroFilters.maxYear) params.set('maxYear', heroFilters.maxYear);
-        if (heroFilters.minVal) params.set(showMonthly ? 'minMonthly' : 'minPrice', heroFilters.minVal);
-        if (heroFilters.maxVal) params.set(showMonthly ? 'maxMonthly' : 'maxPrice', heroFilters.maxVal);
+        if (heroFilters.minVal) params.set('minPrice', heroFilters.minVal);
+        if (heroFilters.maxVal) params.set('maxPrice', heroFilters.maxVal);
         navigate(`/cars${params.toString() ? '?' + params.toString() : ''}`);
     };
 
@@ -233,27 +233,11 @@ function PublicHomePage() {
                             {/* Price in TZS */}
                             <div>
                                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#525252', marginBottom: '0.25rem' }}>Price in TZS</div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f4f4f4', borderRadius: '6px', padding: '0.375rem 0.625rem', marginBottom: '0.375rem' }}>
-                                    <div>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0a500' }}>Show Monthly Payment</div>
-                                        <div style={{ fontSize: '0.6875rem', color: '#8d8d8d' }}>5 Year Plan with 100% Financing</div>
-                                    </div>
-                                    <div onClick={() => setShowMonthly(!showMonthly)} style={{
-                                        width: '40px', height: '22px', borderRadius: '11px', cursor: 'pointer',
-                                        background: showMonthly ? '#f0a500' : '#e0e0e0', position: 'relative', transition: 'background 0.2s', flexShrink: 0
-                                    }}>
-                                        <div style={{
-                                            position: 'absolute', top: '3px', left: showMonthly ? '21px' : '3px',
-                                            width: '16px', height: '16px', borderRadius: '50%', background: 'white',
-                                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                        }} />
-                                    </div>
-                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
-                                    <input type="number" placeholder={showMonthly ? 'Monthly Min' : 'Min Price (TZS)'}
+                                    <input type="number" placeholder="Min Price (TZS)"
                                         value={heroFilters.minVal} onChange={e => setHeroFilters({...heroFilters, minVal: e.target.value})}
                                         style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
-                                    <input type="number" placeholder={showMonthly ? 'Monthly Max' : 'Max Price (TZS)'}
+                                    <input type="number" placeholder="Max Price (TZS)"
                                         value={heroFilters.maxVal} onChange={e => setHeroFilters({...heroFilters, maxVal: e.target.value})}
                                         style={{ padding: '0.375rem 0.5rem', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '0.8125rem' }} />
                                 </div>
