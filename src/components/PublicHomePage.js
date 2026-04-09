@@ -47,12 +47,6 @@ const HOW_IT_WORKS = [
 
 const MAKES = ['Toyota', 'Nissan', 'Honda', 'Mitsubishi', 'Mercedes-Benz', 'BMW', 'Mazda', 'Subaru', 'Volkswagen', 'Hyundai', 'Kia', 'Suzuki', 'Land Rover', 'Ford', 'Isuzu', 'Peugeot', 'Audi'];
 
-function calcMonthly(price) {
-    // 100% financing, 15% annual, 60 months (5 years)
-    const r = 0.15 / 12;
-    const n = 60;
-    return Math.round(price * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
-}
 
 function HeroSlider({ height }) {
     const [slides, setSlides] = useState([]);
@@ -367,9 +361,6 @@ function PublicHomePage() {
                                     <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem', color: '#161616', cursor: 'pointer' }} onClick={() => navigate(`/cars/${car.car_id}`)}>
                                         {car.year} {car.make} {car.model}
                                     </h3>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f0a500' }}>
-                                        TZS {calcMonthly(car.price).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#8d8d8d' }}>/ per month for 5 years</span>
-                                    </div>
                                     <div style={{ display: 'flex', gap: '0.75rem', color: '#6f6f6f', fontSize: '0.8rem', marginBottom: '0.875rem', flexWrap: 'wrap' }}>
                                         <span>🏎️ {car.mileage?.toLocaleString()} km</span>
                                         <span>⚙️ {car.transmission}</span>

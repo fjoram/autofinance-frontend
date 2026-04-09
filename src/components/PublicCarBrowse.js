@@ -303,11 +303,6 @@ function PublicCarBrowse() {
                                             onClick={() => navigate(`/cars/${car.car_id}`)}>
                                             {car.year} {car.make} {car.model}
                                         </h3>
-                                        {/* Monthly payment prominent */}
-                                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f0a500' }}>
-                                            TZS {calcMonthlyEstimate(car.price).toLocaleString()}
-                                            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#8d8d8d' }}> / per month for 5 years</span>
-                                        </div>
                                         {/* Specs row */}
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', color: '#6f6f6f', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                                             <span>🏎️ {car.mileage?.toLocaleString()} km</span>

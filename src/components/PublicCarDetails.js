@@ -430,9 +430,6 @@ function PublicCarDetails() {
                             <div style={{ fontSize: '1.875rem', fontWeight: 900, color: '#0f62fe', marginBottom: '0.25rem' }}>
                                 TZS {car.price?.toLocaleString()}
                             </div>
-                            <div style={{ color: '#6f6f6f', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-                                Est. TZS {calcMonthly(car.price, 20, 15, 48).toLocaleString()}/month (20% down, 48mo)
-                            </div>
 
                             <button onClick={() => handleApplyNow()} style={{
                                 width: '100%', background: '#0f62fe', color: 'white', border: 'none',
