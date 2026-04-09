@@ -370,26 +370,18 @@ function PublicHomePage() {
                                     <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f0a500' }}>
                                         TZS {calcMonthly(car.price).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#8d8d8d' }}>/ per month for 5 years</span>
                                     </div>
-                                    <div style={{ fontSize: '0.8125rem', color: '#6f6f6f', marginBottom: '0.625rem' }}>
-                                        TZS {car.price?.toLocaleString()} cash
-                                    </div>
                                     <div style={{ display: 'flex', gap: '0.75rem', color: '#6f6f6f', fontSize: '0.8rem', marginBottom: '0.875rem', flexWrap: 'wrap' }}>
                                         <span>🏎️ {car.mileage?.toLocaleString()} km</span>
                                         <span>⚙️ {car.transmission}</span>
                                         <span>⛽ {car.fuel_type}</span>
                                         <span>📍 {car.location_city}</span>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                    <div>
                                         <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
-                                            background: '#f0a500', color: 'white', border: 'none',
+                                            width: '100%', background: '#f0a500', color: 'white', border: 'none',
                                             padding: '0.625rem', borderRadius: '4px', fontWeight: 700,
                                             fontSize: '0.8125rem', cursor: 'pointer'
                                         }}>Car Financing</button>
-                                        <button onClick={() => navigate(`/cars/${car.car_id}`)} style={{
-                                            background: 'white', color: '#161616', border: '1px solid #e0e0e0',
-                                            padding: '0.625rem', borderRadius: '4px', fontWeight: 600,
-                                            fontSize: '0.8125rem', cursor: 'pointer'
-                                        }}>Cash Purchase</button>
                                     </div>
                                 </div>
                             </div>
