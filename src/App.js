@@ -7,6 +7,8 @@ import PublicHomePage from './components/PublicHomePage';
 import PublicCarBrowse from './components/PublicCarBrowse';
 import PublicCarDetails from './components/PublicCarDetails';
 import { HowItWorksPage, AboutPage } from './components/PublicInfoPages';
+import { NotificationProvider, useNotification } from './contexts/NotificationContext';
+import NotificationContainer from './components/NotificationContainer';
 import './App.css';
 
 // Platform configuration
@@ -460,6 +462,39 @@ function AdminSidebar({ activeView, onNavigate }) {
                     <span style={{ fontSize: '18px' }}>🖼️</span>
                     <span>Hero Slider</span>
                 </button>
+
+                <button
+                    onClick={() => onNavigate('how-it-works')}
+                    style={{
+                        width: '100%',
+                        padding: '0.875rem 1.5rem',
+                        border: 'none',
+                        background: activeView === 'how-it-works' ? '#f3f4f6' : 'transparent',
+                        borderLeft: activeView === 'how-it-works' ? '3px solid #667eea' : '3px solid transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '14px',
+                        fontWeight: activeView === 'how-it-works' ? '600' : '400',
+                        color: activeView === 'how-it-works' ? '#667eea' : '#6c757d',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        if (activeView !== 'how-it-works') {
+                            e.target.style.background = '#f8f9fa';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (activeView !== 'how-it-works') {
+                            e.target.style.background = 'transparent';
+                        }
+                    }}
+                >
+                    <span style={{ fontSize: '18px' }}>📋</span>
+                    <span>How It Works</span>
+                </button>
             </nav>
         </div>
     );
@@ -742,6 +777,7 @@ function AdminOverview({ onNavigate }) {
 
 // SellerVerification Component
 function SellerVerification() {
+    const { success, error: notifyError, warning } = useNotification();
     const [pendingSellers, setPendingSellers] = useState([]);
     const [verifiedSellers, setVerifiedSellers] = useState([]);
     const [rejectedSellers, setRejectedSellers] = useState([]);
@@ -789,7 +825,7 @@ function SellerVerification() {
             }
         } catch (error) {
             console.error('Error fetching sellers:', error);
-            alert('Error loading sellers');
+            notifyError('Error loading sellers');
         } finally {
             setLoading(false);
         }
@@ -830,19 +866,19 @@ function SellerVerification() {
 
             if (error) throw error;
 
-            alert('✅ Seller approved successfully!');
+            success('Seller approved successfully!');
             setShowDetailModal(false);
             fetchSellers();
         } catch (error) {
             console.error('Error approving seller:', error);
-            alert('❌ Error approving seller: ' + (error?.message || 'Please try again'));
+            notifyError('Error approving seller: ' + (error?.message || 'Please try again'));
         }
     };
 
     const handleRejectSeller = async () => {
         if (!selectedSeller) return;
         if (!rejectionReason.trim()) {
-            alert('Please provide a reason for rejection');
+            warning('Please provide a reason for rejection');
             return;
         }
 
@@ -871,12 +907,12 @@ function SellerVerification() {
 
             if (error) throw error;
 
-            alert('❌ Seller rejected');
+            notifyError('Seller rejected');
             setShowDetailModal(false);
             fetchSellers();
         } catch (error) {
             console.error('Error rejecting seller:', error);
-            alert('❌ Error rejecting seller: ' + (error?.message || 'Please try again'));
+            notifyError('Error rejecting seller: ' + (error?.message || 'Please try again'));
         }
     };
 
@@ -1803,6 +1839,211 @@ function AdminAnalyticsView() {
 }
 
 
+// Admin: How It Works Steps Manager
+function AdminHowItWorksView() {
+    const SECTIONS = [
+        { key: 'buyers', label: 'For Buyers', color: '#0f62fe' },
+        { key: 'sellers', label: 'For Sellers', color: '#24a148' },
+        { key: 'banks', label: 'For Banks', color: '#f0a500' },
+    ];
+
+    const [steps, setSteps] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState('buyers');
+    const [form, setForm] = useState({ icon: '', title: '', description: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState({});
+    const [msg, setMsg] = useState('');
+
+    useEffect(() => { fetchSteps(); }, []);
+
+    const fetchSteps = async () => {
+        setLoading(true);
+        const { data } = await supabase.from('how_it_works_steps').select('*').order('step_number');
+        setSteps(data || []);
+        setLoading(false);
+    };
+
+    const sectionSteps = steps.filter(s => s.section === activeSection).sort((a, b) => a.step_number - b.step_number);
+    const activeColor = SECTIONS.find(s => s.key === activeSection)?.color;
+
+    const handleAdd = async (e) => {
+        e.preventDefault();
+        setMsg('');
+        const sectionArr = steps.filter(s => s.section === activeSection);
+        const nextStep = sectionArr.length > 0 ? Math.max(...sectionArr.map(s => s.step_number)) + 1 : 1;
+        const { error } = await supabase.from('how_it_works_steps').insert({
+            section: activeSection,
+            step_number: nextStep,
+            icon: form.icon || '📌',
+            title: form.title,
+            description: form.description,
+            is_active: true
+        });
+        if (error) { setMsg('Error: ' + error.message); return; }
+        setMsg('Step added successfully!');
+        setForm({ icon: '', title: '', description: '' });
+        fetchSteps();
+    };
+
+    const handleDelete = async (step) => {
+        if (!window.confirm('Delete this step?')) return;
+        await supabase.from('how_it_works_steps').delete().eq('id', step.id);
+        const remaining = steps
+            .filter(s => s.section === step.section && s.id !== step.id)
+            .sort((a, b) => a.step_number - b.step_number);
+        for (let i = 0; i < remaining.length; i++) {
+            await supabase.from('how_it_works_steps').update({ step_number: i + 1 }).eq('id', remaining[i].id);
+        }
+        fetchSteps();
+    };
+
+    const handleEdit = (step) => {
+        setEditingId(step.id);
+        setEditForm({ icon: step.icon, title: step.title, description: step.description });
+    };
+
+    const handleSaveEdit = async (step) => {
+        const { error } = await supabase.from('how_it_works_steps')
+            .update({ icon: editForm.icon, title: editForm.title, description: editForm.description })
+            .eq('id', step.id);
+        if (error) { setMsg('Error: ' + error.message); return; }
+        setEditingId(null);
+        fetchSteps();
+    };
+
+    const handleMove = async (step, direction) => {
+        const arr = sectionSteps;
+        const idx = arr.findIndex(s => s.id === step.id);
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= arr.length) return;
+        const swapStep = arr[swapIdx];
+        await Promise.all([
+            supabase.from('how_it_works_steps').update({ step_number: swapStep.step_number }).eq('id', step.id),
+            supabase.from('how_it_works_steps').update({ step_number: step.step_number }).eq('id', swapStep.id),
+        ]);
+        fetchSteps();
+    };
+
+    const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '0.875rem', boxSizing: 'border-box' };
+
+    return (
+        <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>How It Works — Steps</h2>
+            <p style={{ color: '#6c757d', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+                Manage the steps shown on the public How It Works page. Add, edit, delete, or reorder steps per section.
+            </p>
+
+            {/* Section Tabs */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                {SECTIONS.map(s => (
+                    <button key={s.key} onClick={() => { setActiveSection(s.key); setMsg(''); }}
+                        style={{
+                            padding: '0.5rem 1.25rem', borderRadius: '4px', fontWeight: 600,
+                            fontSize: '0.875rem', cursor: 'pointer', border: '2px solid ' + s.color,
+                            background: activeSection === s.key ? s.color : 'white',
+                            color: activeSection === s.key ? 'white' : s.color,
+                        }}>
+                        {s.label} ({steps.filter(x => x.section === s.key).length})
+                    </button>
+                ))}
+            </div>
+
+            {/* Steps List */}
+            {loading ? <p style={{ color: '#6c757d' }}>Loading...</p> : (
+                <div style={{ marginBottom: '2.5rem' }}>
+                    {sectionSteps.length === 0 && (
+                        <div style={{ background: '#f4f4f4', borderRadius: '8px', padding: '2rem', textAlign: 'center', color: '#6c757d' }}>
+                            No steps yet for this section. Add one below.
+                        </div>
+                    )}
+                    {sectionSteps.map((step, i) => (
+                        <div key={step.id} style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', padding: '1rem 1.25rem', marginBottom: '0.75rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                            {/* Step number + reorder */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', flexShrink: 0, paddingTop: '0.25rem' }}>
+                                <div style={{ width: '30px', height: '30px', background: activeColor, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem' }}>{i + 1}</div>
+                                <button onClick={() => handleMove(step, 'up')} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#ccc' : '#525252', fontSize: '0.8rem', padding: '1px' }}>▲</button>
+                                <button onClick={() => handleMove(step, 'down')} disabled={i === sectionSteps.length - 1} style={{ background: 'none', border: 'none', cursor: i === sectionSteps.length - 1 ? 'default' : 'pointer', color: i === sectionSteps.length - 1 ? '#ccc' : '#525252', fontSize: '0.8rem', padding: '1px' }}>▼</button>
+                            </div>
+
+                            {/* Content */}
+                            <div style={{ flex: 1 }}>
+                                {editingId === step.id ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '0.5rem' }}>
+                                            <input value={editForm.icon} onChange={e => setEditForm({ ...editForm, icon: e.target.value })}
+                                                placeholder="📌" style={{ ...inputStyle, fontSize: '1.25rem', textAlign: 'center' }} />
+                                            <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                                                placeholder="Title" style={inputStyle} />
+                                        </div>
+                                        <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                            rows={3} placeholder="Description"
+                                            style={{ ...inputStyle, resize: 'vertical' }} />
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={() => handleSaveEdit(step)} style={{ background: '#24a148', color: 'white', border: 'none', padding: '0.375rem 1rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Save</button>
+                                            <button onClick={() => setEditingId(null)} style={{ background: '#f4f4f4', color: '#525252', border: 'none', padding: '0.375rem 1rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Cancel</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                            <span style={{ fontSize: '1.25rem' }}>{step.icon}</span>
+                                            <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{step.title}</span>
+                                        </div>
+                                        <p style={{ color: '#525252', fontSize: '0.875rem', lineHeight: 1.6, margin: 0 }}>{step.description}</p>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            {editingId !== step.id && (
+                                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                    <button onClick={() => handleEdit(step)} style={{ background: '#0f62fe', color: 'white', border: 'none', padding: '0.375rem 0.75rem', borderRadius: '4px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                                    <button onClick={() => handleDelete(step)} style={{ background: '#da1e28', color: 'white', border: 'none', padding: '0.375rem 0.75rem', borderRadius: '4px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Add New Step */}
+            <div style={{ background: 'white', border: '1px solid #e9ecef', borderRadius: '8px', padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem' }}>
+                    Add New Step — {SECTIONS.find(s => s.key === activeSection)?.label}
+                </h3>
+                {msg && (
+                    <div style={{ padding: '0.625rem 1rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.875rem', background: msg.startsWith('Error') ? '#fff1f1' : '#defbe6', color: msg.startsWith('Error') ? '#da1e28' : '#0e6027' }}>
+                        {msg}
+                    </div>
+                )}
+                <form onSubmit={handleAdd}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Icon</label>
+                            <input type="text" placeholder="📌" value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })}
+                                style={{ ...inputStyle, fontSize: '1.25rem', textAlign: 'center' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Title *</label>
+                            <input type="text" placeholder="e.g. Car Inspection" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required
+                                style={inputStyle} />
+                        </div>
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.375rem', color: '#525252' }}>Description *</label>
+                        <textarea placeholder="Describe this step in detail..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required
+                            rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+                    </div>
+                    <button type="submit" style={{ background: activeColor, color: 'white', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
+                        Add Step
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // Admin: Hero Slider View
 function AdminSliderView() {
     const [slides, setSlides] = useState([]);
@@ -2108,6 +2349,7 @@ function AdminDashboard() {
                 {view === 'analytics' && <AdminAnalyticsView />}
                 {view === 'settings' && <AdminSettingsView />}
                 {view === 'slider' && <AdminSliderView />}
+                {view === 'how-it-works' && <AdminHowItWorksView />}
             </div>
         </>
     );
@@ -6551,6 +6793,8 @@ function App() {
     console.log('🎨 Rendering App, current user:', user);
 
     return (
+        <NotificationProvider>
+            <NotificationContainer />
         <Router>
             <Routes>
                 {/* Public Routes — no auth required */}
@@ -6632,6 +6876,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </Router>
+        </NotificationProvider>
     );
 }
 
