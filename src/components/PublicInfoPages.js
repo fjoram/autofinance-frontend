@@ -1,9 +1,18 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PublicNav from './PublicNav';
 
 export function HowItWorksPage() {
     const navigate = useNavigate();
+    const { hash } = useLocation();
+
+    useEffect(() => {
+        if (hash) {
+            const el = document.querySelector(hash);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [hash]);
+
     return (
         <div style={{ background: '#f4f4f4', minHeight: '100vh' }}>
             <PublicNav />
