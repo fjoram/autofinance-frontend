@@ -390,10 +390,14 @@ function PublicCarDetails() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {loanComparison.map((offer, i) => (
-                                                <tr key={offer.productId} style={{ borderBottom: '1px solid #f4f4f4', background: i === 0 ? '#f0fff4' : 'white' }}>
+                                            {(() => {
+                                                const lowestMonthly = Math.min(...loanComparison.map(o => o.monthly));
+                                                return loanComparison.map((offer) => {
+                                                    const isBest = offer.monthly === lowestMonthly;
+                                                    return (
+                                                <tr key={offer.productId} style={{ borderBottom: '1px solid #f4f4f4', background: isBest ? '#f0fff4' : 'white' }}>
                                                     <td style={{ padding: '0.875rem 0.75rem', fontWeight: 600 }}>
-                                                        {i === 0 && <span style={{ fontSize: '0.75rem', background: '#24a148', color: 'white', padding: '1px 6px', borderRadius: '3px', marginRight: '0.375rem' }}>Best</span>}
+                                                        {isBest && <span style={{ fontSize: '0.75rem', background: '#24a148', color: 'white', padding: '1px 6px', borderRadius: '3px', marginRight: '0.375rem' }}>Best</span>}
                                                         {offer.bank}
                                                     </td>
                                                     <td style={{ padding: '0.875rem 0.75rem', color: '#525252' }}>{offer.product}</td>
@@ -411,7 +415,9 @@ function PublicCarDetails() {
                                                         </button>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                    );
+                                                });
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
