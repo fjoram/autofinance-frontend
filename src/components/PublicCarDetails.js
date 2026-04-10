@@ -112,7 +112,7 @@ function PublicCarDetails() {
             .from('cars')
             .select(`
                 *,
-                seller:sellers(seller_id, business_name, business_type, city, region, verification_status, rating)
+                seller:sellers(seller_id, business_name, business_type, city, region, verification_status, rating, user:users!sellers_user_id_fkey(phone, email))
             `)
             .eq('car_id', id)
             .single();
@@ -454,6 +454,22 @@ function PublicCarDetails() {
                                         <span style={{ color: '#8d8d8d' }}>Location</span>
                                         <span style={{ fontWeight: 600 }}>{car.seller?.city || car.location_city || '—'}</span>
                                     </div>
+                                    {car.seller?.user?.phone && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#8d8d8d' }}>Phone</span>
+                                            <a href={`tel:${car.seller.user.phone}`} style={{ fontWeight: 600, color: '#0f62fe', textDecoration: 'none' }}>
+                                                {car.seller.user.phone}
+                                            </a>
+                                        </div>
+                                    )}
+                                    {car.seller?.user?.email && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#8d8d8d' }}>Email</span>
+                                            <a href={`mailto:${car.seller.user.email}`} style={{ fontWeight: 600, color: '#0f62fe', textDecoration: 'none', fontSize: '0.8125rem' }}>
+                                                {car.seller.user.email}
+                                            </a>
+                                        </div>
+                                    )}
                                     {car.seller?.verification_status === 'approved' && (
                                         <div style={{ marginTop: '0.25rem', color: '#24a148', fontWeight: 600, fontSize: '0.8125rem' }}>
                                             ✓ Verified Dealer
