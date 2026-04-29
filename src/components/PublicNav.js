@@ -43,7 +43,6 @@ function PublicNav() {
         { label: 'Buyer Portal', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#0f62fe' },
         { label: 'Seller Portal', path: user?.user_metadata?.user_type === 'seller' ? '/seller-dashboard' : '/login', color: '#24a148' },
         { label: 'Bank Portal', path: user?.user_metadata?.user_type === 'bank' ? '/bank-dashboard' : '/login', color: '#f0a500' },
-        { label: 'Admin Portal', path: '/admin-dashboard', color: '#8a3ffc' },
     ];
 
     return (
@@ -182,7 +181,6 @@ function PublicNav() {
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Buyer Portal</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Seller Portal</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Bank Portal</a>
-                <a onClick={() => handleNav('/admin-dashboard')} style={{ cursor: 'pointer' }}>Admin Portal</a>
                 {user ? (
                     <>
                         <a onClick={() => handleNav(getDashboardPath())} style={{ cursor: 'pointer' }}>My Dashboard</a>
