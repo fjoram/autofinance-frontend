@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
@@ -11,8 +11,8 @@ import { NotificationProvider, useNotification } from './contexts/NotificationCo
 import NotificationContainer from './components/NotificationContainer';
 import './App.css';
 
-// Platform configuration
-const PLATFORM_FEE_RATE = 0.005; // 0.5% of loan amount charged to bank/deducted from disbursement
+// Platform configuration — loaded dynamically from Supabase platform_settings table
+const PlatformSettingsContext = createContext({ platformFeeRate: 0.005, setPlatformFeeRate: () => {} });
 
 const MOCK_INSURANCE = [
     { id: 1, name: "AAR Insurance", type: "Comprehensive", premium: 850000, basePremiumPercent: 3.5 },
@@ -402,6 +402,7 @@ function AdminSidebar({ activeView, onNavigate }) {
 
 // AdminOverview Component - Dashboard Homepage
 function AdminOverview({ onNavigate }) {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalBuyers: 0,
@@ -1349,6 +1350,7 @@ function AdminCarsView() {
 
 // Admin: Applications View
 function AdminApplicationsView() {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -2081,6 +2083,7 @@ function AdminSliderView() {
 
 // Admin: Settings View
 function AdminSettingsView() {
+    const { platformFeeRate, setPlatformFeeRate } = useContext(PlatformSettingsContext);
     const [adminUsers, setAdminUsers] = useState([]);
     const [platformInfo, setPlatformInfo] = useState({ activeBanks: 0, verifiedSellers: 0 });
     const [loading, setLoading] = useState(true);
@@ -2088,6 +2091,13 @@ function AdminSettingsView() {
     const [addAdminEmail, setAddAdminEmail] = useState('');
     const [addAdminLoading, setAddAdminLoading] = useState(false);
     const [addAdminMessage, setAddAdminMessage] = useState('');
+    const [feeInput, setFeeInput] = useState((platformFeeRate * 100).toFixed(2));
+    const [feeLoading, setFeeLoading] = useState(false);
+    const [feeMessage, setFeeMessage] = useState('');
+
+    useEffect(() => {
+        setFeeInput((platformFeeRate * 100).toFixed(2));
+    }, [platformFeeRate]);
 
     useEffect(() => {
         fetchSettings();
@@ -2107,6 +2117,30 @@ function AdminSettingsView() {
             console.error('Error fetching settings:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveFeeRate = async (e) => {
+        e.preventDefault();
+        const newRate = parseFloat(feeInput) / 100;
+        if (isNaN(newRate) || newRate <= 0 || newRate >= 1) {
+            setFeeMessage('❌ Enter a valid percentage between 0 and 100.');
+            return;
+        }
+        setFeeLoading(true);
+        setFeeMessage('');
+        try {
+            const { error } = await supabase
+                .from('platform_settings')
+                .update({ platform_fee_rate: newRate, updated_at: new Date().toISOString() })
+                .eq('id', 1);
+            if (error) throw error;
+            setPlatformFeeRate(newRate);
+            setFeeMessage('✅ Platform fee rate updated successfully.');
+        } catch (error) {
+            setFeeMessage('❌ Error: ' + error.message);
+        } finally {
+            setFeeLoading(false);
         }
     };
 
@@ -2173,17 +2207,30 @@ function AdminSettingsView() {
 
             <div className="card" style={{ marginBottom: '1.5rem' }}>
                 <h3 className="card-title" style={{ marginBottom: '1rem' }}>Platform Configuration</h3>
-                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <form onSubmit={handleSaveFeeRate} style={{ background: '#f8fafc', borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
                             <div style={{ fontWeight: '600', marginBottom: '4px' }}>Platform Fee Rate</div>
-                            <div style={{ fontSize: '13px', color: '#6c757d' }}>To change this rate, update PLATFORM_FEE_RATE in App.js</div>
+                            <div style={{ fontSize: '13px', color: '#6c757d' }}>Applied to all loan disbursements across the platform</div>
                         </div>
-                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#667eea' }}>
-                            {(PLATFORM_FEE_RATE * 100).toFixed(1)}%
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                max="99"
+                                value={feeInput}
+                                onChange={e => setFeeInput(e.target.value)}
+                                style={{ width: '90px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '20px', fontWeight: '700', color: '#667eea', textAlign: 'center' }}
+                            />
+                            <span style={{ fontSize: '20px', fontWeight: '700', color: '#667eea' }}>%</span>
+                            <button type="submit" className="btn btn-primary" disabled={feeLoading} style={{ fontSize: '14px', padding: '8px 16px' }}>
+                                {feeLoading ? 'Saving...' : 'Save'}
+                            </button>
                         </div>
                     </div>
-                </div>
+                    {feeMessage && <p style={{ marginTop: '0.75rem', fontSize: '14px' }}>{feeMessage}</p>}
+                </form>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="stat-card">
                         <div className="stat-label">Active Banks</div>
@@ -3479,6 +3526,7 @@ function ProductsView() {
 
 // DisbursementModal Component
 function DisbursementModal({ application, onClose, onSuccess }) {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
     const [disbursementData, setDisbursementData] = useState({
         reference: '',
         notes: '',
@@ -4497,6 +4545,7 @@ function ApplicationsView({ applications, loading, onSelectApplication, getStatu
 
 // Bank Dashboard
 function BankDashboard() {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
     const [view, setView] = useState('dashboard');
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [applications, setApplications] = useState([]);
@@ -6752,6 +6801,12 @@ function ProtectedRoute({ children, allowedUserType }) {
 // Main App Component
 function App() {
     const [user, setUser] = useState(null);
+    const [platformFeeRate, setPlatformFeeRate] = useState(0.005);
+
+    useEffect(() => {
+        supabase.from('platform_settings').select('platform_fee_rate').eq('id', 1).single()
+            .then(({ data }) => { if (data) setPlatformFeeRate(parseFloat(data.platform_fee_rate)); });
+    }, []);
 
     useEffect(() => {
         console.log('🔄 App component mounted, checking session...');
@@ -6783,6 +6838,7 @@ function App() {
     console.log('🎨 Rendering App, current user:', user);
 
     return (
+        <PlatformSettingsContext.Provider value={{ platformFeeRate, setPlatformFeeRate }}>
         <NotificationProvider>
             <NotificationContainer />
         <Router>
@@ -6867,6 +6923,7 @@ function App() {
             </Routes>
         </Router>
         </NotificationProvider>
+        </PlatformSettingsContext.Provider>
     );
 }
 
