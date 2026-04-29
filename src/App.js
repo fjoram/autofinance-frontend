@@ -3799,6 +3799,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
     });
     const [processing, setProcessing] = useState(false);
     const [portalAccount, setPortalAccount] = useState(null);
+    const [portalAccountLoaded, setPortalAccountLoaded] = useState(false);
 
     useEffect(() => {
         supabase.from('platform_settings')
@@ -3807,8 +3808,9 @@ function DisbursementModal({ application, onClose, onSuccess }) {
             .then(({ data }) => {
                 if (data && data.length > 0) {
                     const map = Object.fromEntries(data.map(r => [r.setting_key, r.setting_value]));
-                    setPortalAccount(map);
+                    if (map.portal_account_number) setPortalAccount(map);
                 }
+                setPortalAccountLoaded(true);
             });
     }, []);
 
@@ -3817,6 +3819,11 @@ function DisbursementModal({ application, onClose, onSuccess }) {
     const sellerAmount = loanAmount - platformFee;
 
     const handleDisburse = async () => {
+        if (!portalAccount) {
+            alert('❌ Commission receiving account is not configured. Contact the platform admin before disbursing.');
+            return;
+        }
+
         if (!disbursementData.reference.trim()) {
             alert('❌ Please enter payment reference number');
             return;
@@ -3917,9 +3924,11 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                     </div>
 
                     {/* Platform Commission Destination */}
-                    <div className="card" style={{ background: '#fff7ed', borderLeft: '4px solid #f59e0b', marginBottom: '1.5rem' }}>
-                        <h4 style={{ marginBottom: '1rem', color: '#92400e' }}>🏦 Send Platform Commission To</h4>
-                        {portalAccount && portalAccount.portal_account_number ? (
+                    <div className="card" style={{ background: portalAccount ? '#fff7ed' : '#fee2e2', borderLeft: `4px solid ${portalAccount ? '#f59e0b' : '#dc2626'}`, marginBottom: '1.5rem' }}>
+                        <h4 style={{ marginBottom: '1rem', color: portalAccount ? '#92400e' : '#991b1b' }}>🏦 Send Platform Commission To</h4>
+                        {!portalAccountLoaded ? (
+                            <p style={{ color: '#6c757d', fontSize: '14px', margin: 0 }}>Loading account details...</p>
+                        ) : portalAccount ? (
                             <table style={{ width: '100%', fontSize: '14px' }}>
                                 <tbody>
                                     <tr>
@@ -3947,9 +3956,14 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                                 </tbody>
                             </table>
                         ) : (
-                            <p style={{ color: '#dc2626', fontSize: '14px', margin: 0 }}>
-                                ⚠️ Admin has not configured the commission receiving account yet. Contact admin before disbursing.
-                            </p>
+                            <div>
+                                <p style={{ color: '#991b1b', fontSize: '14px', fontWeight: '600', margin: '0 0 0.5rem' }}>
+                                    ⛔ Commission receiving account not configured
+                                </p>
+                                <p style={{ color: '#7f1d1d', fontSize: '13px', margin: 0 }}>
+                                    The platform admin must set up the commission account before disbursement can proceed. Please contact the admin.
+                                </p>
+                            </div>
                         )}
                     </div>
 
@@ -4026,7 +4040,7 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                         </p>
                     </div>
 
-                    {application.seller?.payment_method && (
+                    {application.seller?.payment_method && portalAccount && (
                         <>
                             <div className="form-group">
                                 <label style={{ fontWeight: '600' }}>Payment Reference Number *</label>
@@ -4078,8 +4092,8 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                         Cancel
                     </button>
                     
-                    {application.seller?.payment_method && (
-                        <button 
+                    {application.seller?.payment_method && portalAccount && (
+                        <button
                             className="btn btn-primary"
                             onClick={handleDisburse}
                             disabled={processing || !disbursementData.confirmed || !disbursementData.reference.trim()}
