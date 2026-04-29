@@ -2554,6 +2554,7 @@ function Sidebar({ userType, activeView, onNavigate }) {
 
 // Buyer Dashboard
 function BuyerDashboard() {
+    const { platformFeeRate } = useContext(PlatformSettingsContext);
     const [view, setView] = useState('browse');
     const [selectedCar, setSelectedCar] = useState(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -2566,6 +2567,7 @@ function BuyerDashboard() {
     });
     const [myApplications, setMyApplications] = useState([]);
     const [appsLoading, setAppsLoading] = useState(false);
+    const [detailApp, setDetailApp] = useState(null);
 
     // Fetch cars from database on mount
     useEffect(() => {
@@ -2596,7 +2598,8 @@ function BuyerDashboard() {
                 .select(`
                     *,
                     car:cars(car_id, make, model, year, color, mileage, transmission, fuel_type, body_type, location_city, images),
-                    bank:banks(bank_name)
+                    bank:banks(bank_name),
+                    seller:sellers(business_name, city, user:users!sellers_user_id_fkey(phone, email))
                 `)
                 .eq('buyer_id', buyerData.buyer_id)
                 .order('submitted_at', { ascending: false });
@@ -2843,7 +2846,7 @@ function BuyerDashboard() {
                     <>
                         <div className="card-header">
                             <h1 className="card-title">My Applications</h1>
-                            <p className="card-subtitle">Track your loan applications and inspection updates</p>
+                            <p className="card-subtitle">Track your loan applications, calculations, and all party updates</p>
                         </div>
 
                         {appsLoading ? (
@@ -2854,81 +2857,123 @@ function BuyerDashboard() {
                             </div>
                         ) : (
                             myApplications.map(app => {
-                                const inspStatus = app.inspection_status;
-                                const inspDate = app.inspection_scheduled_date
-                                    ? new Date(app.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
-                                    : null;
-
-                                let inspectionBanner = null;
-                                if (inspStatus === 'scheduled' && inspDate) {
-                                    inspectionBanner = (
-                                        <div style={{ background: '#e8f4fd', border: '1px solid #0f62fe', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
-                                            <div style={{ fontWeight: 600, color: '#0f62fe' }}>Inspection scheduled for {inspDate}</div>
-                                            {app.inspection_report?.inspector_name && (
-                                                <div style={{ color: '#525252', fontSize: '0.8125rem', marginTop: '0.2rem' }}>
-                                                    Inspector: {app.inspection_report.inspector_name}
-                                                </div>
-                                            )}
-                                            <div style={{ fontSize: '0.8125rem', color: '#525252', marginTop: '0.2rem' }}>
-                                                {[app.car?.color, app.car?.mileage ? `${app.car.mileage.toLocaleString()} km` : null, app.car?.transmission, app.car?.fuel_type].filter(Boolean).join(' · ')}
-                                            </div>
-                                        </div>
-                                    );
-                                } else if (inspStatus === 'passed') {
-                                    inspectionBanner = (
-                                        <div style={{ background: '#d9f5e8', border: '1px solid #10b981', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
-                                            <span style={{ color: '#10b981', fontWeight: 600 }}>✅ Inspection passed</span>
-                                            {app.inspection_completed_date && (
-                                                <span style={{ color: '#525252', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
-                                                    on {new Date(app.inspection_completed_date).toLocaleDateString('en-GB')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    );
-                                } else if (inspStatus === 'failed') {
-                                    inspectionBanner = (
-                                        <div style={{ background: '#fde8e8', border: '1px solid #dc2626', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
-                                            <span style={{ color: '#dc2626', fontWeight: 600 }}>❌ Inspection failed — bank will contact you</span>
-                                        </div>
-                                    );
-                                } else if (inspStatus === 'repairs_requested') {
-                                    inspectionBanner = (
-                                        <div style={{ background: '#fff7e0', border: '1px solid #d97706', borderRadius: '6px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
-                                            <span style={{ color: '#d97706', fontWeight: 600 }}>🔧 Seller has been asked to repair the vehicle before re-inspection</span>
-                                        </div>
-                                    );
-                                }
-
+                                const loanAmt = parseFloat(app.loan_amount || 0);
                                 const statusColors = {
                                     submitted: { bg: '#e8f4fd', color: '#0f62fe' },
+                                    under_review: { bg: '#fff7e0', color: '#d97706' },
                                     approved: { bg: '#d9f5e8', color: '#10b981' },
                                     rejected: { bg: '#fde8e8', color: '#dc2626' },
-                                    disbursed: { bg: '#d9f5e8', color: '#047857' },
+                                    disbursed: { bg: '#d1fae5', color: '#047857' },
                                     cancelled: { bg: '#f3f4f6', color: '#6b7280' },
                                 };
                                 const sc = statusColors[app.status] || { bg: '#f3f4f6', color: '#6b7280' };
 
+                                // Status timeline steps
+                                const steps = [
+                                    { key: 'submitted', label: 'Applied', icon: '📝', date: app.submitted_at },
+                                    { key: 'bank_review', label: 'Bank Review', icon: '🏦', date: null },
+                                    { key: 'approved', label: app.status === 'rejected' ? 'Rejected' : 'Approved', icon: app.status === 'rejected' ? '❌' : '✅', date: app.approved_at || app.rejected_at || null },
+                                    { key: 'inspection', label: 'Inspection', icon: '🔍', date: app.inspection_completed_date || null },
+                                    { key: 'disbursed', label: 'Disbursed', icon: '💰', date: app.disbursement_date || null },
+                                ];
+                                const stepOrder = ['submitted', 'bank_review', 'approved', 'inspection', 'disbursed'];
+                                const statusStepMap = { submitted: 0, under_review: 1, approved: 2, rejected: 2, disbursed: 4 };
+                                const currentStep = app.status === 'rejected' ? 2 : (statusStepMap[app.status] ?? 0);
+                                if (app.inspection_status && ['scheduled','passed','failed','repairs_requested'].includes(app.inspection_status)) {
+                                    steps[3].active = true;
+                                }
+
                                 return (
-                                    <div key={app.application_id} className="card" style={{ marginBottom: '1rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    <div key={app.application_id} className="card" style={{ marginBottom: '1.25rem' }}>
+                                        {/* Header */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                                             <div>
-                                                <h3 style={{ margin: 0 }}>{app.car?.make} {app.car?.model} {app.car?.year}</h3>
-                                                <p style={{ margin: '0.25rem 0 0', color: '#6c757d', fontSize: '0.875rem' }}>
-                                                    {app.bank?.bank_name} · TZS {app.loan_amount?.toLocaleString()} · {app.loan_term_months} months
-                                                </p>
-                                                <p style={{ margin: '0.15rem 0 0', color: '#6c757d', fontSize: '0.8125rem' }}>
-                                                    Applied: {new Date(app.submitted_at).toLocaleDateString('en-GB')}
+                                                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{app.car?.make} {app.car?.model} {app.car?.year}</h3>
+                                                <p style={{ margin: '0.2rem 0 0', color: '#6c757d', fontSize: '0.875rem' }}>
+                                                    {app.bank?.bank_name} · Applied {new Date(app.submitted_at).toLocaleDateString('en-GB')}
                                                 </p>
                                             </div>
-                                            <span style={{ background: sc.bg, color: sc.color, padding: '0.3rem 0.8rem', borderRadius: '20px', fontWeight: 600, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
-                                                {app.status}
-                                            </span>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <span style={{ background: sc.bg, color: sc.color, padding: '0.3rem 0.9rem', borderRadius: '20px', fontWeight: 700, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+                                                    {app.status?.replace('_', ' ')}
+                                                </span>
+                                                <button className="btn btn-sm btn-outline" onClick={() => setDetailApp(app)}>Full Details</button>
+                                            </div>
                                         </div>
-                                        {inspectionBanner}
+
+                                        {/* Status Timeline */}
+                                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                                            {steps.map((step, i) => {
+                                                const done = i < currentStep || (i === currentStep && app.status !== 'submitted');
+                                                const active = i === currentStep;
+                                                const rejected = app.status === 'rejected' && i === 2;
+                                                return (
+                                                    <React.Fragment key={step.key}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px' }}>
+                                                            <div style={{
+                                                                width: '36px', height: '36px', borderRadius: '50%',
+                                                                background: rejected ? '#fde8e8' : done || active ? '#d1fae5' : '#f3f4f6',
+                                                                border: `2px solid ${rejected ? '#dc2626' : done || active ? '#10b981' : '#e0e0e0'}`,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                fontSize: '16px'
+                                                            }}>{step.icon}</div>
+                                                            <div style={{ fontSize: '11px', fontWeight: active ? '700' : '500', color: active ? '#0f62fe' : rejected ? '#dc2626' : done ? '#047857' : '#8d8d8d', marginTop: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>{step.label}</div>
+                                                            {step.date && <div style={{ fontSize: '10px', color: '#8d8d8d', textAlign: 'center' }}>{new Date(step.date).toLocaleDateString('en-GB')}</div>}
+                                                        </div>
+                                                        {i < steps.length - 1 && (
+                                                            <div style={{ flex: 1, height: '2px', background: i < currentStep ? '#10b981' : '#e0e0e0', minWidth: '20px', marginBottom: '20px' }} />
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Quick Financials */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                { label: 'Car Price', value: `TZS ${parseFloat(app.car_price || 0).toLocaleString()}` },
+                                                { label: 'Down Payment', value: `TZS ${parseFloat(app.down_payment || 0).toLocaleString()}` },
+                                                { label: 'Loan Amount', value: `TZS ${loanAmt.toLocaleString()}` },
+                                                { label: 'Monthly Payment', value: `TZS ${parseFloat(app.monthly_payment || 0).toLocaleString()}` },
+                                                { label: 'Interest Rate', value: `${app.interest_rate}% p.a.` },
+                                                { label: 'Term', value: `${app.loan_term_months} months` },
+                                            ].map(({ label, value }) => (
+                                                <div key={label} style={{ background: '#f8fafc', borderRadius: '8px', padding: '0.625rem 0.875rem' }}>
+                                                    <div style={{ fontSize: '11px', color: '#8d8d8d', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
+                                                    <div style={{ fontWeight: '700', fontSize: '0.9rem', marginTop: '2px' }}>{value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Inspection update */}
+                                        {app.inspection_status && (
+                                            <div style={{
+                                                marginTop: '0.875rem', padding: '0.75rem 1rem', borderRadius: '6px',
+                                                background: app.inspection_status === 'passed' ? '#d1fae5' : app.inspection_status === 'failed' ? '#fde8e8' : app.inspection_status === 'repairs_requested' ? '#fff7e0' : '#e8f4fd',
+                                                border: `1px solid ${app.inspection_status === 'passed' ? '#10b981' : app.inspection_status === 'failed' ? '#dc2626' : app.inspection_status === 'repairs_requested' ? '#d97706' : '#0f62fe'}`,
+                                                fontSize: '0.875rem'
+                                            }}>
+                                                {app.inspection_status === 'scheduled' && `🗓 Inspection scheduled${app.inspection_scheduled_date ? ` for ${new Date(app.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` : ''}`}
+                                                {app.inspection_status === 'passed' && `✅ Inspection passed${app.inspection_completed_date ? ` on ${new Date(app.inspection_completed_date).toLocaleDateString('en-GB')}` : ''}`}
+                                                {app.inspection_status === 'failed' && '❌ Inspection failed — bank will contact you'}
+                                                {app.inspection_status === 'repairs_requested' && '🔧 Seller has been asked to repair the vehicle before re-inspection'}
+                                            </div>
+                                        )}
+
+                                        {/* Rejection reason */}
                                         {app.status === 'rejected' && app.rejection_reason && (
-                                            <p style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.875rem' }}>
-                                                Reason: {app.rejection_reason}
-                                            </p>
+                                            <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: '#fde8e8', borderRadius: '6px', fontSize: '0.875rem', color: '#dc2626' }}>
+                                                <strong>Rejection reason:</strong> {app.rejection_reason}
+                                            </div>
+                                        )}
+
+                                        {/* Disbursement info */}
+                                        {app.status === 'disbursed' && (
+                                            <div style={{ marginTop: '0.875rem', padding: '0.75rem 1rem', background: '#d1fae5', borderRadius: '6px', fontSize: '0.875rem', color: '#047857' }}>
+                                                <strong>💰 Loan Disbursed</strong>
+                                                {app.disbursement_date && <span> on {new Date(app.disbursement_date).toLocaleDateString('en-GB')}</span>}
+                                                {app.disbursement_reference && <span> · Ref: <code>{app.disbursement_reference}</code></span>}
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -2939,6 +2984,96 @@ function BuyerDashboard() {
             </div>
 
 
+
+            {/* Application Full Details Modal */}
+            {detailApp && (() => {
+                const app = detailApp;
+                const loanAmt = parseFloat(app.loan_amount || 0);
+                const carPrice = parseFloat(app.car_price || 0);
+                const downPayment = parseFloat(app.down_payment || 0);
+                const monthlyPayment = parseFloat(app.monthly_payment || 0);
+                const totalPayable = parseFloat(app.total_payable || 0);
+                const totalInterest = parseFloat(app.total_interest || 0);
+                const processingFee = parseFloat(app.processing_fee || 0);
+                const platformFee = parseFloat(app.platform_fee_amount || loanAmt * platformFeeRate);
+                const Row = ({ label, value, bold, green }) => (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.55rem 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <span style={{ color: '#6c757d', fontSize: '13px' }}>{label}</span>
+                        <span style={{ fontWeight: bold ? '700' : '500', color: green ? '#047857' : '#161616', fontSize: '14px' }}>{value}</span>
+                    </div>
+                );
+                return (
+                    <div className="modal-overlay" onClick={() => setDetailApp(null)}>
+                        <div className="modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <div>
+                                    <div className="modal-title">{app.car?.make} {app.car?.model} {app.car?.year}</div>
+                                    <div style={{ fontSize: '13px', color: '#6c757d', marginTop: '2px' }}>{app.bank?.bank_name} · Applied {new Date(app.submitted_at).toLocaleDateString('en-GB')}</div>
+                                </div>
+                                <button className="modal-close" onClick={() => setDetailApp(null)}>×</button>
+                            </div>
+                            <div className="modal-body" style={{ padding: '1.25rem 1.5rem' }}>
+
+                                {/* Car */}
+                                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6c757d', marginBottom: '0.5rem' }}>Car Details</div>
+                                    <Row label="Make / Model / Year" value={`${app.car?.make} ${app.car?.model} ${app.car?.year}`} />
+                                    {app.car?.color && <Row label="Color" value={app.car.color} />}
+                                    {app.car?.mileage && <Row label="Mileage" value={`${app.car.mileage.toLocaleString()} km`} />}
+                                    {app.car?.transmission && <Row label="Transmission" value={app.car.transmission} />}
+                                    {app.car?.fuel_type && <Row label="Fuel Type" value={app.car.fuel_type} />}
+                                    {app.car?.location_city && <Row label="Location" value={app.car.location_city} />}
+                                    {app.seller?.business_name && <Row label="Seller" value={app.seller.business_name} />}
+                                </div>
+
+                                {/* Loan Calculation */}
+                                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6c757d', marginBottom: '0.5rem' }}>Loan Calculation</div>
+                                    <Row label="Car Price" value={`TZS ${carPrice.toLocaleString()}`} />
+                                    <Row label="Down Payment (you pay upfront)" value={`TZS ${downPayment.toLocaleString()}`} />
+                                    <Row label="Loan Amount Financed" value={`TZS ${loanAmt.toLocaleString()}`} bold />
+                                    <Row label="Interest Rate" value={`${app.interest_rate}% p.a.`} />
+                                    <Row label="Loan Term" value={`${app.loan_term_months} months`} />
+                                    <Row label="Monthly Repayment" value={`TZS ${monthlyPayment.toLocaleString()}`} bold />
+                                    <Row label="Total Interest Payable" value={`TZS ${totalInterest.toLocaleString()}`} />
+                                    {processingFee > 0 && <Row label="Bank Processing Fee" value={`TZS ${processingFee.toLocaleString()}`} />}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                                        <span style={{ fontWeight: '700' }}>Total Amount You Repay</span>
+                                        <span style={{ fontWeight: '800', color: '#0f62fe', fontSize: '16px' }}>TZS {(totalPayable + processingFee).toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                {/* Platform fee info */}
+                                <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', border: '1px solid #fde68a' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#92400e', marginBottom: '0.5rem' }}>Platform Information</div>
+                                    <Row label={`Platform Commission (${(platformFeeRate * 100).toFixed(2)}% of loan)`} value={`TZS ${platformFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+                                    <div style={{ fontSize: '12px', color: '#92400e', marginTop: '0.5rem' }}>This fee is deducted from the seller — it does not affect your repayment amount.</div>
+                                </div>
+
+                                {/* Updates from all parties */}
+                                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6c757d', marginBottom: '0.75rem' }}>Status Updates</div>
+                                    {[
+                                        { party: 'You', icon: '👤', label: 'Application Submitted', date: app.submitted_at, show: true },
+                                        { party: 'Bank', icon: '🏦', label: app.status === 'rejected' ? `Application Rejected${app.rejection_reason ? ` — ${app.rejection_reason}` : ''}` : app.status === 'approved' || app.status === 'disbursed' ? 'Loan Approved' : 'Under Review', date: app.approved_at || app.rejected_at, show: true, color: app.status === 'rejected' ? '#dc2626' : app.status === 'approved' || app.status === 'disbursed' ? '#047857' : '#d97706' },
+                                        { party: 'Inspection', icon: '🔍', label: app.inspection_status === 'passed' ? 'Vehicle Inspection Passed' : app.inspection_status === 'failed' ? 'Vehicle Inspection Failed' : app.inspection_status === 'scheduled' ? `Inspection Scheduled${app.inspection_scheduled_date ? ` for ${new Date(app.inspection_scheduled_date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` : ''}` : app.inspection_status === 'repairs_requested' ? 'Seller Requested to Repair Vehicle' : null, date: app.inspection_completed_date || app.inspection_scheduled_date, show: !!app.inspection_status && !!app.inspection_status },
+                                        { party: 'Admin', icon: '🔐', label: app.status === 'disbursed' ? `Loan Disbursed${app.disbursement_reference ? ` · Ref: ${app.disbursement_reference}` : ''}` : null, date: app.disbursement_date, show: app.status === 'disbursed' },
+                                    ].filter(u => u.show && u.label).map((update, i) => (
+                                        <div key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'flex-start' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{update.icon}</div>
+                                            <div>
+                                                <div style={{ fontWeight: '600', fontSize: '13px', color: update.color || '#161616' }}>{update.label}</div>
+                                                <div style={{ fontSize: '12px', color: '#8d8d8d' }}>{update.party}{update.date ? ` · ${new Date(update.date).toLocaleDateString('en-GB')}` : ''}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Car Details Modal - WITH IMAGES & GALLERY */}
 
