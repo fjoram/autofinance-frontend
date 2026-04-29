@@ -194,106 +194,126 @@ body {
 }
 
 .sidebar {
-    width: 260px;
+    width: 240px;
     background: white;
     border-right: 1px solid var(--border);
-    padding: 2rem 0;
+    padding: 1.5rem 0;
+    flex-shrink: 0;
 }
 
 .sidebar-nav {
     list-style: none;
+    padding: 0 0.75rem;
 }
 
 .sidebar-nav li {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.125rem;
 }
 
 .sidebar-nav a {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
+    gap: 0.625rem;
+    padding: 0.625rem 0.875rem;
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.2s;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: all 0.15s;
 }
 
 .sidebar-nav a:hover {
-    background: #f4f4f4;
+    background: #f0f5ff;
     color: var(--primary);
 }
 
 .sidebar-nav a.active {
-    background: #e8f4ff;
+    background: #e8f0fe;
     color: var(--primary);
-    border-right: 3px solid var(--primary);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .main-content {
     flex: 1;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
+    min-width: 0;
 }
 
 /* Cards */
 .card {
     background: var(--bg-card);
-    border-radius: 8px;
-    padding: 1.5rem;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
     box-shadow: var(--shadow-sm);
-    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+    margin-bottom: 1.25rem;
 }
 
 .card-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
 .card-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .card-subtitle {
     color: var(--text-muted);
-    font-size: 0.875rem;
+    font-size: 0.85rem;
 }
 
 /* Stats Grid */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
 }
 
 .stat-card {
     background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    border-radius: 10px;
     box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .stat-label {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
 }
 
 .stat-value {
-    font-size: 2rem;
+    font-size: 1.875rem;
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 0.25rem;
+    line-height: 1.1;
 }
 
 .stat-change {
-    font-size: 0.8125rem;
-    color: var(--success);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
 /* Car Grid */
@@ -379,32 +399,38 @@ body {
 .comparison-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 1.5rem;
+    margin-top: 0;
     background: white;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
 }
 
 .comparison-table th {
     background: #f4f4f4;
-    padding: 1rem;
+    padding: 0.625rem 1rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     color: var(--text-secondary);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
 }
 
 .comparison-table td {
-    padding: 1.25rem 1rem;
+    padding: 0.625rem 1rem;
     border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    vertical-align: middle;
 }
 
-.comparison-table tr:hover {
-    background: #f8f9fa;
+.comparison-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table tr:hover td {
+    background: #f0f5ff;
 }
 
 .bank-name {
