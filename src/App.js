@@ -6083,6 +6083,7 @@ function PaymentSettings() {
 
 // Seller Dashboard
 function SellerDashboard() {
+    const { platformFeeRate } = useContext(PlatformSettingsContext);
     const [view, setView] = useState('dashboard');
     const [cars, setCars] = useState([]);
     const [applications, setApplications] = useState([]);
@@ -6100,6 +6101,7 @@ function SellerDashboard() {
     const [appFilterCar, setAppFilterCar] = useState('all');
     const [appFilterStatus, setAppFilterStatus] = useState('all');
     const [upcomingInspections, setUpcomingInspections] = useState([]);
+    const [selectedApp, setSelectedApp] = useState(null);
 
     useEffect(() => {
         fetchSellerData();
@@ -6647,41 +6649,42 @@ function SellerDashboard() {
                                             <tr>
                                                 <th>Car</th>
                                                 <th>Buyer</th>
-                                                <th>Contact</th>
                                                 <th>Bank</th>
                                                 <th>Loan Amount</th>
+                                                <th>You Receive</th>
                                                 <th>Status</th>
                                                 <th>Date</th>
+                                                <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filtered.map(app => (
+                                            {filtered.map(app => {
+                                                const loan = parseFloat(app.loan_amount || 0);
+                                                const fee = parseFloat(app.platform_fee_amount || loan * platformFeeRate);
+                                                const netAmount = loan - fee;
+                                                return (
                                                 <tr key={app.application_id}>
                                                     <td>{app.car?.make} {app.car?.model} {app.car?.year}</td>
                                                     <td>
-                                                        <div style={{ fontWeight: '500' }}>
-                                                            {app.buyer?.user?.first_name} {app.buyer?.user?.last_name}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ fontSize: '13px' }}>
-                                                            {app.buyer?.user?.phone && <div>📞 {app.buyer.user.phone}</div>}
-                                                            {app.buyer?.user?.email && <div>✉️ {app.buyer.user.email}</div>}
-                                                        </div>
+                                                        <div style={{ fontWeight: '500' }}>{app.buyer?.user?.first_name} {app.buyer?.user?.last_name}</div>
+                                                        <div style={{ fontSize: '12px', color: '#6c757d' }}>{app.buyer?.user?.phone}</div>
                                                     </td>
                                                     <td>{app.bank?.bank_name}</td>
-                                                    <td>TZS {parseFloat(app.loan_amount || 0).toLocaleString()}</td>
+                                                    <td>TZS {loan.toLocaleString()}</td>
+                                                    <td style={{ color: '#065f46', fontWeight: '600' }}>TZS {netAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                                                     <td>
                                                         <span className={`badge badge-${
                                                             app.status === 'approved' || app.status === 'disbursed' ? 'success' :
                                                             app.status === 'rejected' ? 'danger' : 'warning'
-                                                        }`}>
-                                                            {app.status}
-                                                        </span>
+                                                        }`}>{app.status}</span>
                                                     </td>
                                                     <td>{new Date(app.submitted_at).toLocaleDateString('en-GB')}</td>
+                                                    <td>
+                                                        <button className="btn btn-sm btn-outline" onClick={() => setSelectedApp(app)}>View</button>
+                                                    </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 );
@@ -6692,6 +6695,79 @@ function SellerDashboard() {
 
                 {view === 'payment-settings' && <PaymentSettings />}
             </div>
+
+            {/* Application Details Modal */}
+            {selectedApp && (() => {
+                const app = selectedApp;
+                const loan = parseFloat(app.loan_amount || 0);
+                const fee = parseFloat(app.platform_fee_amount || loan * platformFeeRate);
+                const netAmount = loan - fee;
+                const feePercent = (platformFeeRate * 100).toFixed(2);
+                const Row = ({ label, value, highlight }) => (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <span style={{ color: '#6c757d', fontSize: '13px' }}>{label}</span>
+                        <span style={{ fontWeight: highlight ? '700' : '500', color: highlight || '#161616', fontSize: '14px' }}>{value}</span>
+                    </div>
+                );
+                return (
+                    <div className="modal-overlay" onClick={() => setSelectedApp(null)}>
+                        <div className="modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <div>
+                                    <div className="modal-title">Application Details</div>
+                                    <div style={{ fontSize: '13px', color: '#6c757d', marginTop: '2px' }}>
+                                        {app.car?.make} {app.car?.model} {app.car?.year}
+                                    </div>
+                                </div>
+                                <button className="modal-close" onClick={() => setSelectedApp(null)}>×</button>
+                            </div>
+                            <div className="modal-body" style={{ padding: '1.25rem 1.5rem' }}>
+
+                                {/* Status */}
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <span className={`badge badge-${app.status === 'approved' || app.status === 'disbursed' ? 'success' : app.status === 'rejected' ? 'danger' : 'warning'}`} style={{ fontSize: '13px', padding: '0.35rem 1rem' }}>
+                                        {app.status?.toUpperCase()}
+                                    </span>
+                                </div>
+
+                                {/* Buyer */}
+                                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6c757d', marginBottom: '0.5rem' }}>Buyer</div>
+                                    <Row label="Name" value={`${app.buyer?.user?.first_name || ''} ${app.buyer?.user?.last_name || ''}`} />
+                                    {app.buyer?.user?.email && <Row label="Email" value={app.buyer.user.email} />}
+                                    {app.buyer?.user?.phone && <Row label="Phone" value={app.buyer.user.phone} />}
+                                </div>
+
+                                {/* Loan Details */}
+                                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6c757d', marginBottom: '0.5rem' }}>Loan Details</div>
+                                    <Row label="Bank" value={app.bank?.bank_name || '—'} />
+                                    <Row label="Loan Amount" value={`TZS ${loan.toLocaleString()}`} />
+                                    {app.interest_rate && <Row label="Interest Rate" value={`${app.interest_rate}% p.a.`} />}
+                                    {app.loan_term_months && <Row label="Loan Term" value={`${app.loan_term_months} months`} />}
+                                    {app.down_payment && <Row label="Down Payment" value={`TZS ${parseFloat(app.down_payment).toLocaleString()}`} />}
+                                    {app.processing_fee && <Row label="Processing Fee" value={`TZS ${parseFloat(app.processing_fee).toLocaleString()}`} />}
+                                    <Row label="Submitted" value={new Date(app.submitted_at).toLocaleDateString('en-GB')} />
+                                    {app.disbursement_date && <Row label="Disbursed On" value={new Date(app.disbursement_date).toLocaleDateString('en-GB')} />}
+                                    {app.disbursement_reference && <Row label="Disbursement Ref" value={app.disbursement_reference} />}
+                                </div>
+
+                                {/* Platform Commission & Payout */}
+                                <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '1rem', border: '1px solid #fde68a' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#92400e', marginBottom: '0.5rem' }}>Financials</div>
+                                    <Row label="Loan Amount" value={`TZS ${loan.toLocaleString()}`} />
+                                    <Row label={`Platform Commission (${feePercent}%)`} value={`− TZS ${fee.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                                        <span style={{ fontWeight: '700', fontSize: '15px' }}>You Receive</span>
+                                        <span style={{ fontWeight: '800', fontSize: '18px', color: '#065f46' }}>TZS {netAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Add/Edit Car Modal - We'll build this next */}
             {showAddCarModal && (
