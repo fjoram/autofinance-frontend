@@ -33,6 +33,19 @@ function Login() {
 
             if (authError) throw authError;
 
+            // Check if user is an admin first
+            const { data: adminData } = await supabase
+                .from('admins')
+                .select('admin_id')
+                .eq('user_id', authData.user.id)
+                .eq('is_active', true)
+                .single();
+
+            if (adminData) {
+                navigate('/admin');
+                return;
+            }
+
             // Get user type from metadata
             const userType = authData.user?.user_metadata?.user_type;
 

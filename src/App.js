@@ -14,106 +14,6 @@ import './App.css';
 // Platform configuration
 const PLATFORM_FEE_RATE = 0.005; // 0.5% of loan amount charged to bank/deducted from disbursement
 
-// Mock Data
-const MOCK_CARS = [
-    {
-        id: 1,
-        make: "Toyota",
-        model: "Land Cruiser Prado",
-        year: 2020,
-        price: 45000000,
-        mileage: 45000,
-        transmission: "Automatic",
-        fuelType: "Diesel",
-        bodyType: "SUV",
-        color: "White",
-        location: "Dar es Salaam",
-        condition: "Used",
-        sellerId: 1,
-        sellerName: "Premium Motors",
-        status: "available"
-    },
-    {
-        id: 2,
-        make: "Honda",
-        model: "CR-V",
-        year: 2019,
-        price: 32500000,
-        mileage: 38000,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        bodyType: "SUV",
-        color: "Silver",
-        location: "Arusha",
-        condition: "Used",
-        sellerId: 2,
-        sellerName: "Elite Auto Sales",
-        status: "available"
-    },
-    {
-        id: 3,
-        make: "Mercedes-Benz",
-        model: "C-Class",
-        year: 2021,
-        price: 52000000,
-        mileage: 15000,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        bodyType: "Sedan",
-        color: "Black",
-        location: "Dar es Salaam",
-        condition: "Certified Pre-Owned",
-        sellerId: 1,
-        sellerName: "Premium Motors",
-        status: "available"
-    }
-];
-
-const MOCK_BANKS = [
-    {
-        id: 1,
-        name: "CRDB Bank",
-        products: [
-            {
-                id: 1,
-                name: "Auto Loan Premium",
-                interestRate: 15.0,
-                minDownPayment: 20,
-                processingFee: 1.5,
-                terms: [12, 24, 36, 48, 60]
-            }
-        ]
-    },
-    {
-        id: 2,
-        name: "NMB Bank",
-        products: [
-            {
-                id: 2,
-                name: "Car Finance",
-                interestRate: 14.0,
-                minDownPayment: 20,
-                processingFee: 2.0,
-                terms: [12, 24, 36, 48, 60]
-            }
-        ]
-    },
-    {
-        id: 3,
-        name: "Stanbic Bank",
-        products: [
-            {
-                id: 3,
-                name: "Vehicle Loan",
-                interestRate: 16.0,
-                minDownPayment: 25,
-                processingFee: 1.0,
-                terms: [12, 24, 36, 48, 60]
-            }
-        ]
-    }
-];
-
 const MOCK_INSURANCE = [
     { id: 1, name: "AAR Insurance", type: "Comprehensive", premium: 850000, basePremiumPercent: 3.5 },
     { id: 2, name: "Jubilee Insurance", type: "Comprehensive", premium: 780000, basePremiumPercent: 3.0 },
@@ -2184,6 +2084,10 @@ function AdminSettingsView() {
     const [adminUsers, setAdminUsers] = useState([]);
     const [platformInfo, setPlatformInfo] = useState({ activeBanks: 0, verifiedSellers: 0 });
     const [loading, setLoading] = useState(true);
+    const [showAddAdmin, setShowAddAdmin] = useState(false);
+    const [addAdminEmail, setAddAdminEmail] = useState('');
+    const [addAdminLoading, setAddAdminLoading] = useState(false);
+    const [addAdminMessage, setAddAdminMessage] = useState('');
 
     useEffect(() => {
         fetchSettings();
@@ -2203,6 +2107,60 @@ function AdminSettingsView() {
             console.error('Error fetching settings:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddAdmin = async (e) => {
+        e.preventDefault();
+        setAddAdminLoading(true);
+        setAddAdminMessage('');
+        try {
+            // Look up user by email
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('user_id')
+                .eq('email', addAdminEmail.trim().toLowerCase())
+                .single();
+
+            if (userError || !userData) {
+                setAddAdminMessage('❌ No user found with that email. They must be registered first.');
+                return;
+            }
+
+            // Check if already an admin
+            const { data: existing } = await supabase
+                .from('admins')
+                .select('admin_id, is_active')
+                .eq('user_id', userData.user_id)
+                .single();
+
+            if (existing) {
+                if (existing.is_active) {
+                    setAddAdminMessage('⚠️ This user is already an active admin.');
+                } else {
+                    // Re-activate
+                    await supabase.from('admins').update({ is_active: true }).eq('admin_id', existing.admin_id);
+                    setAddAdminMessage('✅ Admin re-activated successfully.');
+                    setAddAdminEmail('');
+                    fetchSettings();
+                }
+                return;
+            }
+
+            // Insert new admin
+            const { error: insertError } = await supabase
+                .from('admins')
+                .insert({ user_id: userData.user_id, is_active: true });
+
+            if (insertError) throw insertError;
+
+            setAddAdminMessage('✅ Admin added successfully.');
+            setAddAdminEmail('');
+            fetchSettings();
+        } catch (error) {
+            setAddAdminMessage('❌ Error: ' + error.message);
+        } finally {
+            setAddAdminLoading(false);
         }
     };
 
@@ -2241,7 +2199,39 @@ function AdminSettingsView() {
             </div>
 
             <div className="card">
-                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Admin Users</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title">Admin Users</h3>
+                    <button
+                        className="btn btn-primary"
+                        style={{ fontSize: '14px', padding: '6px 14px' }}
+                        onClick={() => { setShowAddAdmin(!showAddAdmin); setAddAdminMessage(''); }}
+                    >
+                        {showAddAdmin ? 'Cancel' : '+ Add Admin'}
+                    </button>
+                </div>
+
+                {showAddAdmin && (
+                    <form onSubmit={handleAddAdmin} style={{ background: '#f8fafc', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                        <p style={{ fontWeight: '600', marginBottom: '0.75rem' }}>Promote a registered user to admin</p>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                            <input
+                                type="email"
+                                value={addAdminEmail}
+                                onChange={e => setAddAdminEmail(e.target.value)}
+                                placeholder="user@email.com"
+                                required
+                                style={{ flex: 1, minWidth: '220px', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                            />
+                            <button type="submit" className="btn btn-primary" disabled={addAdminLoading} style={{ fontSize: '14px', padding: '8px 16px' }}>
+                                {addAdminLoading ? 'Adding...' : 'Add Admin'}
+                            </button>
+                        </div>
+                        {addAdminMessage && (
+                            <p style={{ marginTop: '0.75rem', fontSize: '14px' }}>{addAdminMessage}</p>
+                        )}
+                    </form>
+                )}
+
                 {loading ? (
                     <p style={{ color: '#6c757d' }}>Loading...</p>
                 ) : (
