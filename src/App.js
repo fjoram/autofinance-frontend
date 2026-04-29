@@ -38,7 +38,9 @@ function AdminSidebar({ activeView, onNavigate, onLogout }) {
             position: 'fixed',
             left: 0,
             top: 0,
-            overflowY: 'auto'
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'hidden'
         }}>
             {/* Header */}
             <div style={{
@@ -65,7 +67,7 @@ function AdminSidebar({ activeView, onNavigate, onLogout }) {
             </div>
             
             {/* Navigation */}
-            <nav style={{ padding: '1rem 0' }}>
+            <nav style={{ padding: '1rem 0', flex: 1, overflowY: 'auto' }}>
                 <button
                     onClick={() => onNavigate('overview')}
                     style={{
@@ -398,7 +400,7 @@ function AdminSidebar({ activeView, onNavigate, onLogout }) {
             </nav>
 
             {/* Logout */}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem 1.5rem', borderTop: '1px solid #e9ecef' }}>
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e9ecef', flexShrink: 0 }}>
                 <button
                     onClick={onLogout}
                     style={{
