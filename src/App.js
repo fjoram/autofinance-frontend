@@ -2132,8 +2132,8 @@ function AdminSettingsView() {
         try {
             const { error } = await supabase
                 .from('platform_settings')
-                .update({ platform_fee_rate: newRate, updated_at: new Date().toISOString() })
-                .eq('id', 1);
+                .update({ setting_value: String(parseFloat(feeInput)), updated_at: new Date().toISOString() })
+                .eq('setting_key', 'platform_fee_rate');
             if (error) throw error;
             setPlatformFeeRate(newRate);
             setFeeMessage('✅ Platform fee rate updated successfully.');
@@ -6804,8 +6804,8 @@ function App() {
     const [platformFeeRate, setPlatformFeeRate] = useState(0.005);
 
     useEffect(() => {
-        supabase.from('platform_settings').select('platform_fee_rate').eq('id', 1).single()
-            .then(({ data }) => { if (data) setPlatformFeeRate(parseFloat(data.platform_fee_rate)); });
+        supabase.from('platform_settings').select('setting_value').eq('setting_key', 'platform_fee_rate').single()
+            .then(({ data }) => { if (data) setPlatformFeeRate(parseFloat(data.setting_value) / 100); });
     }, []);
 
     useEffect(() => {
