@@ -2139,14 +2139,29 @@ function AdminSettingsView() {
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const [{ data: admins }, { count: activeBanks }, { count: verifiedSellers }, { data: portalSettings }] = await Promise.all([
-                supabase.from('admins').select('admin_id, is_active, user:users!admins_user_id_fkey(first_name, last_name, email)'),
+            const [
+                { data: admins },
+                { count: activeBanks },
+                { count: verifiedSellers },
+                { data: portalSettings }
+            ] = await Promise.all([
+                supabase.from('admins').select('admin_id, is_active, user_id'),
                 supabase.from('banks').select('*', { count: 'exact', head: true }),
                 supabase.from('sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified'),
                 supabase.from('platform_settings').select('setting_key, setting_value').in('setting_key', ['portal_bank_name', 'portal_account_number', 'portal_account_name', 'portal_bank_branch'])
             ]);
-            setAdminUsers(admins || []);
-            if (portalSettings) {
+
+            // Enrich admins with user details
+            let enrichedAdmins = admins || [];
+            if (enrichedAdmins.length > 0) {
+                const userIds = enrichedAdmins.map(a => a.user_id);
+                const { data: users } = await supabase.from('users').select('user_id, first_name, last_name, email').in('user_id', userIds);
+                const userMap = Object.fromEntries((users || []).map(u => [u.user_id, u]));
+                enrichedAdmins = enrichedAdmins.map(a => ({ ...a, user: userMap[a.user_id] || null }));
+            }
+
+            setAdminUsers(enrichedAdmins);
+            if (portalSettings && portalSettings.length > 0) {
                 const map = Object.fromEntries(portalSettings.map(r => [r.setting_key, r.setting_value]));
                 setPortalAccount({
                     bank_name: map.portal_bank_name || '',
