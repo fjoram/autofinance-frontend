@@ -28,7 +28,7 @@ function calculateMonthlyPayment(principal, annualRate, months) {
 }
 
 // AdminSidebar Component - IMPROVED STYLING
-function AdminSidebar({ activeView, onNavigate }) {
+function AdminSidebar({ activeView, onNavigate, onLogout }) {
     return (
         <div className="sidebar" style={{
             width: '260px',
@@ -396,6 +396,33 @@ function AdminSidebar({ activeView, onNavigate }) {
                     <span>How It Works</span>
                 </button>
             </nav>
+
+            {/* Logout */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem 1.5rem', borderTop: '1px solid #e9ecef' }}>
+                <button
+                    onClick={onLogout}
+                    style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #e9ecef',
+                        borderRadius: '8px',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: '#dc2626',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#fff5f5'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                    <span style={{ fontSize: '18px' }}>🚪</span>
+                    <span>Logout</span>
+                </button>
+            </div>
         </div>
     );
 }
@@ -2374,9 +2401,14 @@ function AdminDashboard() {
         return null;
     }
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/';
+    };
+
     return (
         <>
-            <AdminSidebar activeView={view} onNavigate={setView} />
+            <AdminSidebar activeView={view} onNavigate={setView} onLogout={handleLogout} />
             <div className="main-content" style={{ marginLeft: '260px', padding: '2rem' }}>
                 {view === 'overview' && <AdminOverview onNavigate={setView} />}
                 {view === 'seller-verification' && <SellerVerification />}

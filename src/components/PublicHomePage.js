@@ -526,8 +526,9 @@ function PublicHomePage() {
                             </div>
                         </div>
                     </div>
-                    <div style={{ borderTop: '1px solid #393939', paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.8125rem', color: '#6f6f6f' }}>
+                    <div style={{ borderTop: '1px solid #393939', paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.8125rem', color: '#6f6f6f', position: 'relative' }}>
                         © {new Date().getFullYear()} AutoFinance Tanzania. All rights reserved.
+                        <a href="/login" style={{ position: 'absolute', right: 0, bottom: 0, color: '#1e1e1e', fontSize: '10px', textDecoration: 'none', opacity: 0.15 }} title="">·</a>
                     </div>
                 </div>
             </footer>
