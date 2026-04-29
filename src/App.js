@@ -1453,6 +1453,7 @@ function AdminApplicationsView() {
 
 // Admin: Revenue View
 function AdminRevenueView() {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
     const [disbursed, setDisbursed] = useState([]);
     const [loading, setLoading] = useState(true);
 
