@@ -2124,6 +2124,9 @@ function AdminSettingsView() {
     const [feeInput, setFeeInput] = useState((platformFeeRate * 100).toFixed(2));
     const [feeLoading, setFeeLoading] = useState(false);
     const [feeMessage, setFeeMessage] = useState('');
+    const [portalAccount, setPortalAccount] = useState({ bank_name: '', account_number: '', account_name: '', branch: '' });
+    const [portalAccountLoading, setPortalAccountLoading] = useState(false);
+    const [portalAccountMessage, setPortalAccountMessage] = useState('');
 
     useEffect(() => {
         setFeeInput((platformFeeRate * 100).toFixed(2));
@@ -2136,12 +2139,22 @@ function AdminSettingsView() {
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const [{ data: admins }, { count: activeBanks }, { count: verifiedSellers }] = await Promise.all([
+            const [{ data: admins }, { count: activeBanks }, { count: verifiedSellers }, { data: portalSettings }] = await Promise.all([
                 supabase.from('admins').select('admin_id, is_active, user:users!admins_user_id_fkey(first_name, last_name, email)'),
                 supabase.from('banks').select('*', { count: 'exact', head: true }),
-                supabase.from('sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified')
+                supabase.from('sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified'),
+                supabase.from('platform_settings').select('setting_key, setting_value').in('setting_key', ['portal_bank_name', 'portal_account_number', 'portal_account_name', 'portal_bank_branch'])
             ]);
             setAdminUsers(admins || []);
+            if (portalSettings) {
+                const map = Object.fromEntries(portalSettings.map(r => [r.setting_key, r.setting_value]));
+                setPortalAccount({
+                    bank_name: map.portal_bank_name || '',
+                    account_number: map.portal_account_number || '',
+                    account_name: map.portal_account_name || '',
+                    branch: map.portal_bank_branch || ''
+                });
+            }
             setPlatformInfo({ activeBanks: activeBanks || 0, verifiedSellers: verifiedSellers || 0 });
         } catch (error) {
             console.error('Error fetching settings:', error);
@@ -2171,6 +2184,37 @@ function AdminSettingsView() {
             setFeeMessage('❌ Error: ' + error.message);
         } finally {
             setFeeLoading(false);
+        }
+    };
+
+    const handleSavePortalAccount = async (e) => {
+        e.preventDefault();
+        if (!portalAccount.bank_name || !portalAccount.account_number || !portalAccount.account_name) {
+            setPortalAccountMessage('❌ Bank name, account number, and account name are required.');
+            return;
+        }
+        setPortalAccountLoading(true);
+        setPortalAccountMessage('');
+        try {
+            const entries = [
+                { key: 'portal_bank_name', value: portalAccount.bank_name },
+                { key: 'portal_account_number', value: portalAccount.account_number },
+                { key: 'portal_account_name', value: portalAccount.account_name },
+                { key: 'portal_bank_branch', value: portalAccount.branch },
+            ];
+            for (const entry of entries) {
+                const { data: existing } = await supabase.from('platform_settings').select('setting_id').eq('setting_key', entry.key).single();
+                if (existing) {
+                    await supabase.from('platform_settings').update({ setting_value: entry.value, updated_at: new Date().toISOString() }).eq('setting_key', entry.key);
+                } else {
+                    await supabase.from('platform_settings').insert({ setting_key: entry.key, setting_value: entry.value, setting_type: 'portal_account', description: entry.key });
+                }
+            }
+            setPortalAccountMessage('✅ Portal commission account saved successfully.');
+        } catch (error) {
+            setPortalAccountMessage('❌ Error: ' + error.message);
+        } finally {
+            setPortalAccountLoading(false);
         }
     };
 
@@ -2273,6 +2317,42 @@ function AdminSettingsView() {
                         <div className="stat-change">Approved to list cars</div>
                     </div>
                 </div>
+            </div>
+
+            {/* Portal Commission Account */}
+            <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                <h3 className="card-title" style={{ marginBottom: '0.25rem' }}>Commission Receiving Account</h3>
+                <p style={{ fontSize: '13px', color: '#6c757d', marginBottom: '1.25rem' }}>
+                    This account is shown to banks in the disbursement screen so they know where to send the platform fee.
+                </p>
+                <form onSubmit={handleSavePortalAccount}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Bank Name *</label>
+                            <input type="text" value={portalAccount.bank_name} onChange={e => setPortalAccount({ ...portalAccount, bank_name: e.target.value })}
+                                placeholder="e.g. CRDB Bank" style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Account Name *</label>
+                            <input type="text" value={portalAccount.account_name} onChange={e => setPortalAccount({ ...portalAccount, account_name: e.target.value })}
+                                placeholder="e.g. AutoFinance Tanzania Ltd" style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Account Number *</label>
+                            <input type="text" value={portalAccount.account_number} onChange={e => setPortalAccount({ ...portalAccount, account_number: e.target.value })}
+                                placeholder="e.g. 0123456789" style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', fontFamily: 'monospace' }} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Branch (optional)</label>
+                            <input type="text" value={portalAccount.branch} onChange={e => setPortalAccount({ ...portalAccount, branch: e.target.value })}
+                                placeholder="e.g. Dar es Salaam Main" style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }} />
+                        </div>
+                    </div>
+                    <button type="submit" className="btn btn-primary" disabled={portalAccountLoading} style={{ fontSize: '14px' }}>
+                        {portalAccountLoading ? 'Saving...' : 'Save Account Details'}
+                    </button>
+                    {portalAccountMessage && <p style={{ marginTop: '0.75rem', fontSize: '14px' }}>{portalAccountMessage}</p>}
+                </form>
             </div>
 
             <div className="card">
@@ -3703,6 +3783,19 @@ function DisbursementModal({ application, onClose, onSuccess }) {
         confirmed: false
     });
     const [processing, setProcessing] = useState(false);
+    const [portalAccount, setPortalAccount] = useState(null);
+
+    useEffect(() => {
+        supabase.from('platform_settings')
+            .select('setting_key, setting_value')
+            .in('setting_key', ['portal_bank_name', 'portal_account_number', 'portal_account_name', 'portal_bank_branch'])
+            .then(({ data }) => {
+                if (data && data.length > 0) {
+                    const map = Object.fromEntries(data.map(r => [r.setting_key, r.setting_value]));
+                    setPortalAccount(map);
+                }
+            });
+    }, []);
 
     const loanAmount = parseFloat(application.loan_amount || 0);
     const platformFee = Math.round(loanAmount * PLATFORM_FEE_RATE);
@@ -3808,7 +3901,44 @@ function DisbursementModal({ application, onClose, onSuccess }) {
                         </table>
                     </div>
 
-                    <div className="card" style={{ 
+                    {/* Platform Commission Destination */}
+                    <div className="card" style={{ background: '#fff7ed', borderLeft: '4px solid #f59e0b', marginBottom: '1.5rem' }}>
+                        <h4 style={{ marginBottom: '1rem', color: '#92400e' }}>🏦 Send Platform Commission To</h4>
+                        {portalAccount && portalAccount.portal_account_number ? (
+                            <table style={{ width: '100%', fontSize: '14px' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold', width: '40%' }}>Bank:</td>
+                                        <td style={{ padding: '0.4rem 0.5rem' }}>{portalAccount.portal_bank_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold' }}>Account Name:</td>
+                                        <td style={{ padding: '0.4rem 0.5rem' }}>{portalAccount.portal_account_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold' }}>Account Number:</td>
+                                        <td style={{ padding: '0.4rem 0.5rem', fontFamily: 'monospace', fontSize: '15px', fontWeight: '700', color: '#92400e' }}>{portalAccount.portal_account_number}</td>
+                                    </tr>
+                                    {portalAccount.portal_bank_branch && (
+                                        <tr>
+                                            <td style={{ padding: '0.4rem 0.5rem', fontWeight: 'bold' }}>Branch:</td>
+                                            <td style={{ padding: '0.4rem 0.5rem' }}>{portalAccount.portal_bank_branch}</td>
+                                        </tr>
+                                    )}
+                                    <tr style={{ background: '#fef3c7' }}>
+                                        <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Amount to Transfer:</td>
+                                        <td style={{ padding: '0.5rem', fontWeight: '800', color: '#92400e', fontSize: '15px' }}>TZS {platformFee.toLocaleString()}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p style={{ color: '#dc2626', fontSize: '14px', margin: 0 }}>
+                                ⚠️ Admin has not configured the commission receiving account yet. Contact admin before disbursing.
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="card" style={{
                         background: application.seller?.payment_method ? '#fef3c7' : '#fee2e2',
                         borderLeft: application.seller?.payment_method ? '4px solid #f59e0b' : '4px solid #dc2626',
                         marginBottom: '1.5rem'
