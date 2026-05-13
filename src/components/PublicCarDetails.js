@@ -4,6 +4,12 @@ import { supabase } from '../supabaseClient';
 import PublicNav from './PublicNav';
 import './Public.css';
 
+const INSURANCE_OPTIONS = [
+    { id: 1, name: 'AAR Insurance', type: 'Comprehensive', basePremiumPercent: 3.5 },
+    { id: 2, name: 'Jubilee Insurance', type: 'Comprehensive', basePremiumPercent: 3.0 },
+    { id: 3, name: 'Heritage Insurance', type: 'Third Party', basePremiumPercent: 2.5 },
+];
+
 function calcMonthly(price, downPct, annualRate, months) {
     const principal = price * (1 - downPct / 100);
     const r = annualRate / 100 / 12;
@@ -100,6 +106,7 @@ function PublicCarDetails() {
     // Loan calculator state
     const [downPct, setDownPct] = useState(20);
     const [loanTerm, setLoanTerm] = useState(48);
+    const [selectedInsurance, setSelectedInsurance] = useState(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
@@ -138,9 +145,9 @@ function PublicCarDetails() {
             setShowRegisterModal(true);
             return;
         }
-        // User is logged in — go to buyer dashboard with pre-selected car
         localStorage.setItem('pendingCarId', car.car_id);
         if (productId) localStorage.setItem('pendingProductId', productId);
+        if (selectedInsurance) localStorage.setItem('pendingInsurance', JSON.stringify(selectedInsurance));
         navigate('/buyer-dashboard');
     };
 
@@ -321,6 +328,58 @@ function PublicCarDetails() {
                             </div>
                         )}
 
+                        {/* Insurance Selection */}
+                        <div style={{ background: 'white', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                            <h2 style={{ fontWeight: 700, fontSize: '1.125rem', marginBottom: '0.375rem' }}>🛡️ Select Insurance</h2>
+                            <p style={{ color: '#6f6f6f', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+                                Insurance is required for all financed vehicles. Choose a policy to include in your application.
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {INSURANCE_OPTIONS.map(ins => {
+                                    const premium = Math.round((car.price || 0) * ins.basePremiumPercent / 100);
+                                    const isSelected = selectedInsurance?.id === ins.id;
+                                    return (
+                                        <div
+                                            key={ins.id}
+                                            onClick={() => setSelectedInsurance({ ...ins, premium })}
+                                            style={{
+                                                border: `2px solid ${isSelected ? '#0f62fe' : '#e0e0e0'}`,
+                                                borderRadius: '6px',
+                                                padding: '1rem 1.25rem',
+                                                cursor: 'pointer',
+                                                background: isSelected ? '#f0f4ff' : 'white',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                transition: 'all 0.15s'
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: '#161616' }}>
+                                                    {isSelected && <span style={{ color: '#0f62fe', marginRight: '0.5rem' }}>✓</span>}
+                                                    {ins.name}
+                                                </div>
+                                                <div style={{ fontSize: '0.8125rem', color: '#6f6f6f', marginTop: '0.2rem' }}>
+                                                    {ins.type} · {ins.basePremiumPercent}% of car value
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontWeight: 800, color: isSelected ? '#0f62fe' : '#161616', fontSize: '1rem' }}>
+                                                    TZS {premium.toLocaleString()}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#8d8d8d' }}>annual premium</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {!selectedInsurance && (
+                                <p style={{ marginTop: '0.875rem', fontSize: '0.8125rem', color: '#da1e28', fontWeight: 500 }}>
+                                    ⚠ Please select an insurance policy before applying.
+                                </p>
+                            )}
+                        </div>
+
                         {/* Loan Calculator */}
                         <div style={{ background: 'white', borderRadius: '8px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <h2 style={{ fontWeight: 700, fontSize: '1.125rem', marginBottom: '0.375rem' }}>Loan Calculator</h2>
@@ -437,12 +496,34 @@ function PublicCarDetails() {
                                 TZS {car.price?.toLocaleString()}
                             </div>
 
-                            <button onClick={() => handleApplyNow()} style={{
-                                width: '100%', background: '#0f62fe', color: 'white', border: 'none',
-                                padding: '1rem', borderRadius: '4px', fontWeight: 700, fontSize: '1.0625rem',
-                                cursor: 'pointer', marginBottom: '0.75rem'
-                            }}>
-                                Apply for Financing
+                            {selectedInsurance && (
+                                <div style={{ background: '#f0f4ff', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                        <span style={{ color: '#525252' }}>🛡️ {selectedInsurance.name}</span>
+                                        <span style={{ fontWeight: 600 }}>TZS {selectedInsurance.premium.toLocaleString()}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #d0d9ff', paddingTop: '0.375rem', marginTop: '0.375rem' }}>
+                                        <span style={{ fontWeight: 700, color: '#161616' }}>Total financed</span>
+                                        <span style={{ fontWeight: 800, color: '#0f62fe' }}>
+                                            TZS {((car.price || 0) + selectedInsurance.premium).toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => handleApplyNow()}
+                                disabled={!selectedInsurance}
+                                style={{
+                                    width: '100%', border: 'none',
+                                    padding: '1rem', borderRadius: '4px', fontWeight: 700, fontSize: '1.0625rem',
+                                    cursor: selectedInsurance ? 'pointer' : 'not-allowed',
+                                    marginBottom: '0.75rem',
+                                    background: selectedInsurance ? '#0f62fe' : '#c6c6c6',
+                                    color: 'white',
+                                }}
+                            >
+                                {selectedInsurance ? 'Apply for Financing' : 'Select Insurance First'}
                             </button>
 
                             <div style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#6f6f6f', marginBottom: '1.25rem' }}>
@@ -489,7 +570,8 @@ function PublicCarDetails() {
                         <div style={{ background: 'white', borderRadius: '8px', padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                             <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', color: '#161616' }}>Why AutoFinance?</div>
                             {[
-                                ['🏦', 'Compare 8+ banks at once'],
+                                ['🏦', 'Powered by I&M Bank Tanzania'],
+                                ['🛡️', 'Insurance included in every application'],
                                 ['⚡', 'Approval in 24–48 hours'],
                                 ['🔒', 'Secure & encrypted'],
                                 ['✅', 'Verified sellers only'],
