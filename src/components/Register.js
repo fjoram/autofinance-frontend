@@ -18,6 +18,7 @@ function Register() {
         firstName: '',
         lastName: '',
         phone: '',
+        nidaNumber: '',
         city: '',
         region: '',
         address: ''
@@ -48,6 +49,14 @@ function Register() {
             setMessage('Password must be at least 6 characters');
             setLoading(false);
             return;
+        }
+
+        if (userType === 'buyer') {
+            if (!/^\d{20}$/.test(formData.nidaNumber)) {
+                setMessage('NIDA number must be exactly 20 digits');
+                setLoading(false);
+                return;
+            }
         }
 
         try {
@@ -107,7 +116,8 @@ function Register() {
                     .from('buyers')
                     .insert([{
                         buyer_id: authData.user.id,
-                        user_id: authData.user.id
+                        user_id: authData.user.id,
+                        nida_number: formData.nidaNumber
                     }]);
                 
                 if (profileError) {
@@ -183,6 +193,7 @@ function Register() {
                 firstName: '',
                 lastName: '',
                 phone: '',
+                nidaNumber: '',
                 city: '',
                 region: '',
                 address: ''
@@ -264,6 +275,20 @@ function Register() {
                                     onChange={handleChange}
                                     required
                                     placeholder="Enter your last name"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>NIDA Number</label>
+                                <input
+                                    type="text"
+                                    name="nidaNumber"
+                                    value={formData.nidaNumber}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="Enter your 20-digit NIDA number"
+                                    maxLength={20}
+                                    pattern="\d{20}"
                                 />
                             </div>
                         </>
