@@ -7085,9 +7085,393 @@ function SellerDashboard() {
 }
 
 
+const COVERAGE_TYPE_LABELS = {
+    comprehensive: 'Comprehensive',
+    third_party: 'Third Party',
+    third_party_fire_theft: 'Third Party Fire & Theft'
+};
+
+// Insurance Products View
+function InsuranceProductsView() {
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [insuranceId, setInsuranceId] = useState(null);
+    const emptyForm = {
+        product_name: '',
+        coverage_type: 'comprehensive',
+        base_premium_percent: '',
+        min_premium: '',
+        max_premium: '',
+        coverage_limit: '',
+        min_car_value: '',
+        max_car_value: '',
+        min_car_age: '',
+        max_car_age: '',
+        exclusions: ''
+    };
+    const [formData, setFormData] = useState(emptyForm);
+
+    useEffect(() => { fetchProducts(); }, []);
+
+    const fetchProducts = async () => {
+        setLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: insData } = await supabase
+                .from('insurance_companies')
+                .select('insurance_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!insData) return;
+            setInsuranceId(insData.insurance_id);
+
+            const { data, error } = await supabase
+                .from('insurance_products')
+                .select('*')
+                .eq('insurance_id', insData.insurance_id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setProducts(data || []);
+        } catch (err) {
+            console.error('Error fetching insurance products:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddNew = () => {
+        setEditingProduct(null);
+        setFormData(emptyForm);
+        setShowModal(true);
+    };
+
+    const handleEdit = (product) => {
+        setEditingProduct(product);
+        setFormData({
+            product_name: product.product_name,
+            coverage_type: product.coverage_type,
+            base_premium_percent: product.base_premium_percent,
+            min_premium: product.min_premium || '',
+            max_premium: product.max_premium || '',
+            coverage_limit: product.coverage_limit || '',
+            min_car_value: product.min_car_value || '',
+            max_car_value: product.max_car_value || '',
+            min_car_age: product.min_car_age ?? '',
+            max_car_age: product.max_car_age ?? '',
+            exclusions: product.exclusions || ''
+        });
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                insurance_id: insuranceId,
+                product_name: formData.product_name,
+                coverage_type: formData.coverage_type,
+                base_premium_percent: parseFloat(formData.base_premium_percent),
+                min_premium: formData.min_premium ? parseFloat(formData.min_premium) : null,
+                max_premium: formData.max_premium ? parseFloat(formData.max_premium) : null,
+                coverage_limit: formData.coverage_limit ? parseFloat(formData.coverage_limit) : null,
+                min_car_value: formData.min_car_value ? parseFloat(formData.min_car_value) : null,
+                max_car_value: formData.max_car_value ? parseFloat(formData.max_car_value) : null,
+                min_car_age: formData.min_car_age !== '' ? parseInt(formData.min_car_age) : null,
+                max_car_age: formData.max_car_age !== '' ? parseInt(formData.max_car_age) : null,
+                exclusions: formData.exclusions || null,
+                is_active: true
+            };
+
+            if (editingProduct) {
+                const { error } = await supabase
+                    .from('insurance_products')
+                    .update(payload)
+                    .eq('insurance_product_id', editingProduct.insurance_product_id);
+                if (error) throw error;
+                alert('✅ Product updated!');
+            } else {
+                const { error } = await supabase
+                    .from('insurance_products')
+                    .insert([payload]);
+                if (error) throw error;
+                alert('✅ Product created!');
+            }
+
+            setShowModal(false);
+            fetchProducts();
+        } catch (err) {
+            console.error('Error saving product:', err);
+            alert('❌ Error saving product: ' + (err?.message || 'Please try again'));
+        }
+    };
+
+    const handleToggleActive = async (product) => {
+        try {
+            const { error } = await supabase
+                .from('insurance_products')
+                .update({ is_active: !product.is_active })
+                .eq('insurance_product_id', product.insurance_product_id);
+            if (error) throw error;
+            fetchProducts();
+        } catch (err) {
+            alert('❌ Error updating product status');
+        }
+    };
+
+    const f = (val) => val ? `TZS ${parseFloat(val).toLocaleString()}` : '—';
+
+    return (
+        <>
+            <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title">Your Insurance Products</h3>
+                    <button className="btn btn-primary" onClick={handleAddNew}>+ Add New Product</button>
+                </div>
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: '#667eea' }}>Loading products...</div>
+                ) : products.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: '#6c757d' }}>
+                        <p>No products yet.</p>
+                        <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>Click "Add New Product" to list your first insurance product.</p>
+                    </div>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table" style={{ marginTop: '1rem' }}>
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Coverage Type</th>
+                                    <th>Premium Rate</th>
+                                    <th>Min Premium</th>
+                                    <th>Max Premium</th>
+                                    <th>Car Value Range</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {products.map(p => (
+                                    <tr key={p.insurance_product_id}>
+                                        <td><strong>{p.product_name}</strong></td>
+                                        <td>{COVERAGE_TYPE_LABELS[p.coverage_type] || p.coverage_type}</td>
+                                        <td>{p.base_premium_percent}%</td>
+                                        <td>{f(p.min_premium)}</td>
+                                        <td>{f(p.max_premium)}</td>
+                                        <td>
+                                            {p.min_car_value || p.max_car_value
+                                                ? `${f(p.min_car_value)} – ${f(p.max_car_value)}`
+                                                : '—'}
+                                        </td>
+                                        <td>
+                                            {p.is_active
+                                                ? <span className="badge badge-success">Active</span>
+                                                : <span className="badge badge-danger">Inactive</span>}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button className="btn btn-sm btn-outline" onClick={() => handleEdit(p)}>Edit</button>
+                                                <button
+                                                    className="btn btn-sm btn-outline"
+                                                    onClick={() => handleToggleActive(p)}
+                                                    style={{ background: p.is_active ? '#dc3545' : '#28a745', color: 'white', border: 'none' }}
+                                                >
+                                                    {p.is_active ? 'Deactivate' : 'Activate'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {showModal && (
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px' }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">{editingProduct ? 'Edit Product' : 'Add Insurance Product'}</h2>
+                            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <div className="modal-body">
+                                <div className="form-group">
+                                    <label>Product Name *</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={formData.product_name}
+                                        onChange={e => setFormData({ ...formData, product_name: e.target.value })}
+                                        placeholder="e.g. Comprehensive Motor Cover"
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Coverage Type *</label>
+                                    <select
+                                        className="form-input"
+                                        value={formData.coverage_type}
+                                        onChange={e => setFormData({ ...formData, coverage_type: e.target.value })}
+                                        required
+                                    >
+                                        <option value="comprehensive">Comprehensive</option>
+                                        <option value="third_party">Third Party</option>
+                                        <option value="third_party_fire_theft">Third Party Fire &amp; Theft</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Base Premium Rate (%) *</label>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={formData.base_premium_percent}
+                                        onChange={e => setFormData({ ...formData, base_premium_percent: e.target.value })}
+                                        placeholder="e.g. 3.5"
+                                        step="0.01"
+                                        min="0"
+                                        required
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label>Min Premium (TZS)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.min_premium}
+                                            onChange={e => setFormData({ ...formData, min_premium: e.target.value })}
+                                            placeholder="e.g. 300000"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Max Premium (TZS)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.max_premium}
+                                            onChange={e => setFormData({ ...formData, max_premium: e.target.value })}
+                                            placeholder="e.g. 5000000"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Coverage Limit (TZS)</label>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={formData.coverage_limit}
+                                        onChange={e => setFormData({ ...formData, coverage_limit: e.target.value })}
+                                        placeholder="e.g. 50000000"
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label>Min Car Value (TZS)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.min_car_value}
+                                            onChange={e => setFormData({ ...formData, min_car_value: e.target.value })}
+                                            placeholder="e.g. 5000000"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Max Car Value (TZS)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.max_car_value}
+                                            onChange={e => setFormData({ ...formData, max_car_value: e.target.value })}
+                                            placeholder="e.g. 200000000"
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label>Min Car Age (years)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.min_car_age}
+                                            onChange={e => setFormData({ ...formData, min_car_age: e.target.value })}
+                                            placeholder="e.g. 0"
+                                            min="0"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Max Car Age (years)</label>
+                                        <input
+                                            type="number"
+                                            className="form-input"
+                                            value={formData.max_car_age}
+                                            onChange={e => setFormData({ ...formData, max_car_age: e.target.value })}
+                                            placeholder="e.g. 15"
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Exclusions</label>
+                                    <textarea
+                                        className="form-input"
+                                        value={formData.exclusions}
+                                        onChange={e => setFormData({ ...formData, exclusions: e.target.value })}
+                                        placeholder="e.g. Flood damage, mechanical breakdown..."
+                                        rows={3}
+                                        style={{ resize: 'vertical' }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">
+                                    {editingProduct ? 'Save Changes' : 'Create Product'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
+
 // Insurance Dashboard
 function InsuranceDashboard() {
     const [view, setView] = useState('dashboard');
+    const [companyName, setCompanyName] = useState('');
+    const [productCount, setProductCount] = useState(0);
+
+    useEffect(() => {
+        const fetchCompany = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data } = await supabase
+                .from('insurance_companies')
+                .select('company_name, insurance_id')
+                .eq('user_id', user.id)
+                .single();
+            if (data) {
+                setCompanyName(data.company_name);
+                const { count } = await supabase
+                    .from('insurance_products')
+                    .select('product_id', { count: 'exact', head: true })
+                    .eq('insurance_id', data.insurance_id)
+                    .eq('is_active', true);
+                setProductCount(count || 0);
+            }
+        };
+        fetchCompany();
+    }, []);
 
     return (
         <>
@@ -7097,60 +7481,62 @@ function InsuranceDashboard() {
                     <>
                         <div className="card-header">
                             <h1 className="card-title">Insurance Dashboard</h1>
-                            <p className="card-subtitle">AAR Insurance</p>
+                            <p className="card-subtitle">{companyName || 'Your Company'}</p>
                         </div>
 
                         <div className="stats-grid">
                             <div className="stat-card">
-                                <div className="stat-label">Active Policies</div>
-                                <div className="stat-value">456</div>
-                                <div className="stat-change">↑ 8% this month</div>
+                                <div className="stat-label">Active Products</div>
+                                <div className="stat-value">{productCount}</div>
+                                <div className="stat-change">Listed on platform</div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-label">New Requests</div>
-                                <div className="stat-value">23</div>
-                                <div className="stat-change">Pending review</div>
+                                <div className="stat-label">Policy Requests</div>
+                                <div className="stat-value">—</div>
+                                <div className="stat-change">Coming soon</div>
                             </div>
                             <div className="stat-card">
                                 <div className="stat-label">Premium Revenue</div>
-                                <div className="stat-value">125M</div>
-                                <div className="stat-change">↑ 15% growth</div>
+                                <div className="stat-value">—</div>
+                                <div className="stat-change">Coming soon</div>
                             </div>
                             <div className="stat-card">
                                 <div className="stat-label">Claims Ratio</div>
-                                <div className="stat-value">12%</div>
-                                <div className="stat-change">Healthy</div>
+                                <div className="stat-value">—</div>
+                                <div className="stat-change">Coming soon</div>
                             </div>
                         </div>
 
-                        <div className="card">
-                            <h3>Insurance Products</h3>
-                            <table className="comparison-table" style={{ marginTop: '1rem' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Product Name</th>
-                                        <th>Type</th>
-                                        <th>Premium Rate</th>
-                                        <th>Active Policies</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {MOCK_INSURANCE.map(product => (
-                                        <tr key={product.id}>
-                                            <td>{product.name}</td>
-                                            <td>{product.type}</td>
-                                            <td>{product.basePremiumPercent}%</td>
-                                            <td>152</td>
-                                            <td>
-                                                <button className="btn btn-sm btn-outline">Manage</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="card" style={{ marginTop: '1.5rem' }}>
+                            <p style={{ color: '#6c757d', textAlign: 'center', padding: '1rem' }}>
+                                Go to <strong>Insurance Products</strong> in the sidebar to manage your product listings.
+                            </p>
                         </div>
                     </>
+                )}
+
+                {view === 'products' && (
+                    <>
+                        <div className="card-header">
+                            <h1 className="card-title">Insurance Products</h1>
+                            <p className="card-subtitle">Manage the products you offer on the platform</p>
+                        </div>
+                        <InsuranceProductsView />
+                    </>
+                )}
+
+                {view === 'requests' && (
+                    <div className="card-header">
+                        <h1 className="card-title">Policy Requests</h1>
+                        <p className="card-subtitle">Coming soon</p>
+                    </div>
+                )}
+
+                {view === 'analytics' && (
+                    <div className="card-header">
+                        <h1 className="card-title">Analytics</h1>
+                        <p className="card-subtitle">Coming soon</p>
+                    </div>
                 )}
             </div>
         </>
