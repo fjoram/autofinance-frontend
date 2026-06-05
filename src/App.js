@@ -2413,10 +2413,10 @@ function AdminSettingsView() {
         setPortalAccountMessage('');
         try {
             const entries = [
-                { setting_key: 'portal_bank_name',       setting_value: portalAccount.bank_name,       setting_type: 'portal_account', description: 'Portal bank name' },
-                { setting_key: 'portal_account_number',  setting_value: portalAccount.account_number,  setting_type: 'portal_account', description: 'Portal account number' },
-                { setting_key: 'portal_account_name',    setting_value: portalAccount.account_name,    setting_type: 'portal_account', description: 'Portal account name' },
-                { setting_key: 'portal_bank_branch',     setting_value: portalAccount.branch,          setting_type: 'portal_account', description: 'Portal bank branch' },
+                { setting_key: 'portal_bank_name',       setting_value: portalAccount.bank_name,       setting_type: 'general', description: 'Portal bank name' },
+                { setting_key: 'portal_account_number',  setting_value: portalAccount.account_number,  setting_type: 'general', description: 'Portal account number' },
+                { setting_key: 'portal_account_name',    setting_value: portalAccount.account_name,    setting_type: 'general', description: 'Portal account name' },
+                { setting_key: 'portal_bank_branch',     setting_value: portalAccount.branch,          setting_type: 'general', description: 'Portal bank branch' },
             ];
             const { error } = await supabase
                 .from('platform_settings')
