@@ -2876,6 +2876,34 @@ function BuyerDashboard() {
         if (view === 'applications') fetchMyApplications();
     }, [view]);
 
+    // Resume pending car from pre-login flow
+    useEffect(() => {
+        const pendingCarId = localStorage.getItem('pendingCarId');
+        if (!pendingCarId) return;
+
+        const resumePendingCar = async () => {
+            try {
+                const { data } = await supabase
+                    .from('cars')
+                    .select(`*, seller:sellers(seller_id, business_name, city, verification_status)`)
+                    .eq('car_id', pendingCarId)
+                    .eq('status', 'available')
+                    .single();
+
+                if (data) handleCarSelect(data);
+            } catch (err) {
+                console.error('Error resuming pending car:', err);
+            } finally {
+                localStorage.removeItem('pendingCarId');
+                localStorage.removeItem('pendingCarName');
+                localStorage.removeItem('pendingProductId');
+                localStorage.removeItem('pendingInsurance');
+            }
+        };
+
+        resumePendingCar();
+    }, []);
+
     const fetchMyApplications = async () => {
         setAppsLoading(true);
         try {
