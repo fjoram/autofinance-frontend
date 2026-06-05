@@ -267,6 +267,31 @@ function AdminSidebar({ activeView, onNavigate, onLogout }) {
                 </button>
 
                 <button
+                    onClick={() => onNavigate('commission')}
+                    style={{
+                        width: '100%',
+                        padding: '0.875rem 1.5rem',
+                        border: 'none',
+                        background: activeView === 'commission' ? '#f3f4f6' : 'transparent',
+                        borderLeft: activeView === 'commission' ? '3px solid #667eea' : '3px solid transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '14px',
+                        fontWeight: activeView === 'commission' ? '600' : '400',
+                        color: activeView === 'commission' ? '#667eea' : '#6c757d',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => { if (activeView !== 'commission') e.target.style.background = '#f8f9fa'; }}
+                    onMouseLeave={(e) => { if (activeView !== 'commission') e.target.style.background = 'transparent'; }}
+                >
+                    <span style={{ fontSize: '18px' }}>💵</span>
+                    <span>Commission</span>
+                </button>
+
+                <button
                     onClick={() => onNavigate('analytics')}
                     style={{
                         width: '100%',
@@ -1662,6 +1687,158 @@ function AdminRevenueView() {
 }
 
 
+// Admin: Commission View
+function AdminCommissionView() {
+    const { platformFeeRate: PLATFORM_FEE_RATE } = useContext(PlatformSettingsContext);
+    const [disbursed, setDisbursed] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => { fetchData(); }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('loan_applications')
+                .select(`
+                    application_id,
+                    disbursement_date,
+                    loan_amount,
+                    platform_fee_amount,
+                    interest_rate,
+                    bank:banks!bank_id(bank_name)
+                `)
+                .eq('status', 'disbursed')
+                .order('disbursement_date', { ascending: false });
+            if (error) throw error;
+            setDisbursed(data || []);
+        } catch (err) {
+            console.error('Error fetching commission data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getFee = (row) => parseFloat(row.platform_fee_amount || parseFloat(row.loan_amount || 0) * PLATFORM_FEE_RATE);
+
+    const totalFees = disbursed.reduce((s, r) => s + getFee(r), 0);
+    const totalLoans = disbursed.reduce((s, r) => s + parseFloat(r.loan_amount || 0), 0);
+    const avgFeeRate = totalLoans > 0 ? (totalFees / totalLoans) * 100 : 0;
+
+    // Per-bank breakdown
+    const byBank = Object.values(
+        disbursed.reduce((acc, row) => {
+            const name = row.bank?.bank_name || 'Unknown';
+            if (!acc[name]) acc[name] = { bank: name, count: 0, loanTotal: 0, feeTotal: 0 };
+            acc[name].count++;
+            acc[name].loanTotal += parseFloat(row.loan_amount || 0);
+            acc[name].feeTotal += getFee(row);
+            return acc;
+        }, {})
+    ).sort((a, b) => b.feeTotal - a.feeTotal);
+
+    return (
+        <>
+            <div className="card-header">
+                <h1 className="card-title">Commission</h1>
+                <p style={{ color: '#6c757d', marginTop: '0.5rem' }}>Platform commission earned from disbursed loans, broken down by bank partner.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="stat-card">
+                    <div className="stat-label">Total Commission Earned</div>
+                    <div className="stat-value">TZS {totalFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div className="stat-change">All time</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Total Loan Book</div>
+                    <div className="stat-value">{(totalLoans / 1000000).toFixed(1)}M</div>
+                    <div className="stat-change">TZS disbursed</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Transactions</div>
+                    <div className="stat-value">{disbursed.length}</div>
+                    <div className="stat-change">Disbursed loans</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Effective Fee Rate</div>
+                    <div className="stat-value">{avgFeeRate.toFixed(2)}%</div>
+                    <div className="stat-change">Avg across all loans</div>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Commission by Bank Partner</h3>
+                {loading ? (
+                    <p style={{ color: '#6c757d' }}>Loading...</p>
+                ) : byBank.length === 0 ? (
+                    <p style={{ color: '#6c757d', textAlign: 'center', padding: '2rem' }}>No disbursed loans yet.</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Bank</th>
+                                    <th>Loans Disbursed</th>
+                                    <th>Total Loan Value (TZS)</th>
+                                    <th>Commission Earned (TZS)</th>
+                                    <th>Avg Fee / Loan (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {byBank.map(b => (
+                                    <tr key={b.bank}>
+                                        <td><strong>{b.bank}</strong></td>
+                                        <td>{b.count}</td>
+                                        <td>{b.loanTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                        <td><strong style={{ color: '#065f46' }}>{b.feeTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></td>
+                                        <td>{(b.feeTotal / b.count).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            <div className="card">
+                <h3 className="card-title" style={{ marginBottom: '1rem' }}>Per-Transaction Breakdown</h3>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading...</p>
+                ) : disbursed.length === 0 ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>No disbursed loans yet.</p>
+                ) : (
+                    <div className="table-scroll">
+                        <table className="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Bank</th>
+                                    <th>Loan Amount (TZS)</th>
+                                    <th>Interest Rate</th>
+                                    <th>Commission (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {disbursed.map(row => (
+                                    <tr key={row.application_id}>
+                                        <td>{row.disbursement_date ? new Date(row.disbursement_date).toLocaleDateString('en-GB') : '—'}</td>
+                                        <td>{row.bank?.bank_name || '—'}</td>
+                                        <td>{parseFloat(row.loan_amount || 0).toLocaleString()}</td>
+                                        <td>{row.interest_rate ? `${row.interest_rate}%` : '—'}</td>
+                                        <td><strong style={{ color: '#065f46' }}>{getFee(row).toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+
 // Admin: Analytics View
 function AdminAnalyticsView() {
     const [data, setData] = useState(null);
@@ -2537,6 +2714,7 @@ function AdminDashboard() {
                 {view === 'cars' && <AdminCarsView />}
                 {view === 'applications' && <AdminApplicationsView />}
                 {view === 'revenue' && <AdminRevenueView />}
+                {view === 'commission' && <AdminCommissionView />}
                 {view === 'analytics' && <AdminAnalyticsView />}
                 {view === 'settings' && <AdminSettingsView />}
                 {view === 'slider' && <AdminSliderView />}
