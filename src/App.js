@@ -2991,9 +2991,7 @@ function BuyerDashboard() {
                 supabase
                     .from('loan_products')
                     .select(`*, bank:banks(bank_id, bank_name, bank_code)`)
-                    .eq('is_active', true)
-                    .gte('max_loan_amount', car.price - Math.round(car.price * 0.2))
-                    .lte('min_loan_amount', car.price - Math.round(car.price * 0.2)),
+                    .eq('is_active', true),
                 supabase
                     .from('insurance_products')
                     .select(`*, company:insurance_companies(company_name)`)
@@ -3017,15 +3015,13 @@ function BuyerDashboard() {
     return loanProducts
         // ✅ FILTER: Only show products where selected term <= max term
         .filter(product => {
-            // Check if buyer's selected term is within bank's maximum
             if (product.max_loan_term_months) {
                 return loanDetails.term <= product.max_loan_term_months;
             }
-            // Fallback for old products with loan_terms array
-            if (product.loan_terms && Array.isArray(product.loan_terms)) {
+            if (product.loan_terms && Array.isArray(product.loan_terms) && product.loan_terms.length > 0) {
                 return product.loan_terms.includes(loanDetails.term);
             }
-            return false;
+            return true; // no term restriction — include the product
         })
         .map(product => {
             const monthlyPayment = calculateMonthlyPayment(
