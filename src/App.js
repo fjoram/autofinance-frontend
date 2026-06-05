@@ -7464,14 +7464,14 @@ function InsuranceDashboard() {
                 setCompanyName(data.company_name);
                 const { count } = await supabase
                     .from('insurance_products')
-                    .select('product_id', { count: 'exact', head: true })
+                    .select('insurance_product_id', { count: 'exact', head: true })
                     .eq('insurance_id', data.insurance_id)
                     .eq('is_active', true);
                 setProductCount(count || 0);
             }
         };
         fetchCompany();
-    }, []);
+    }, [view]);
 
     return (
         <>
