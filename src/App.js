@@ -2413,20 +2413,16 @@ function AdminSettingsView() {
         setPortalAccountMessage('');
         try {
             const entries = [
-                { key: 'portal_bank_name', value: portalAccount.bank_name },
-                { key: 'portal_account_number', value: portalAccount.account_number },
-                { key: 'portal_account_name', value: portalAccount.account_name },
-                { key: 'portal_bank_branch', value: portalAccount.branch },
+                { setting_key: 'portal_bank_name',       setting_value: portalAccount.bank_name,       setting_type: 'portal_account', description: 'Portal bank name' },
+                { setting_key: 'portal_account_number',  setting_value: portalAccount.account_number,  setting_type: 'portal_account', description: 'Portal account number' },
+                { setting_key: 'portal_account_name',    setting_value: portalAccount.account_name,    setting_type: 'portal_account', description: 'Portal account name' },
+                { setting_key: 'portal_bank_branch',     setting_value: portalAccount.branch,          setting_type: 'portal_account', description: 'Portal bank branch' },
             ];
-            for (const entry of entries) {
-                const { data: existing } = await supabase.from('platform_settings').select('setting_id').eq('setting_key', entry.key).single();
-                if (existing) {
-                    await supabase.from('platform_settings').update({ setting_value: entry.value, updated_at: new Date().toISOString() }).eq('setting_key', entry.key);
-                } else {
-                    await supabase.from('platform_settings').insert({ setting_key: entry.key, setting_value: entry.value, setting_type: 'portal_account', description: entry.key });
-                }
-            }
-            setPortalAccountMessage('✅ Portal commission account saved successfully.');
+            const { error } = await supabase
+                .from('platform_settings')
+                .upsert(entries, { onConflict: 'setting_key' });
+            if (error) throw error;
+            setPortalAccountMessage('✅ Commission account saved successfully.');
         } catch (error) {
             setPortalAccountMessage('❌ Error: ' + error.message);
         } finally {
