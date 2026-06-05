@@ -7,6 +7,7 @@ const SECTIONS = [
     { key: 'buyers', label: 'For Buyers', color: '#0f62fe', bg: '#e8f0ff' },
     { key: 'sellers', label: 'For Sellers', color: '#24a148', bg: '#defbe6' },
     { key: 'banks', label: 'For Banks', color: '#f0a500', bg: '#fef3cd' },
+    { key: 'insurers', label: 'For Insurers', color: '#9333ea', bg: '#f3e8ff' },
 ];
 
 export function HowItWorksPage() {

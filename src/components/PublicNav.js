@@ -43,6 +43,7 @@ function PublicNav() {
         { label: 'Buyer Portal', path: user?.user_metadata?.user_type === 'buyer' ? '/buyer-dashboard' : '/login', color: '#0f62fe' },
         { label: 'Seller Portal', path: user?.user_metadata?.user_type === 'seller' ? '/seller-dashboard' : '/login', color: '#24a148' },
         { label: 'Bank Portal', path: user?.user_metadata?.user_type === 'bank' ? '/bank-dashboard' : '/login', color: '#f0a500' },
+        { label: 'Insurer Portal', path: user?.user_metadata?.user_type === 'insurance' ? '/insurance-dashboard' : '/login', color: '#9333ea' },
     ];
 
     return (
@@ -98,6 +99,7 @@ function PublicNav() {
                                     { label: 'For Buyers', path: '/how-it-works#buyers' },
                                     { label: 'For Sellers', path: '/how-it-works#sellers' },
                                     { label: 'For Banks', path: '/how-it-works#banks' },
+                                    { label: 'For Insurers', path: '/how-it-works#insurers' },
                                 ].map(item => (
                                     <Link key={item.label} to={item.path} style={{ textDecoration: 'none' }}>
                                         <div style={{
@@ -177,10 +179,12 @@ function PublicNav() {
                 <a onClick={() => handleNav('/how-it-works#buyers')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Buyers</a>
                 <a onClick={() => handleNav('/how-it-works#sellers')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Sellers</a>
                 <a onClick={() => handleNav('/how-it-works#banks')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Banks</a>
+                <a onClick={() => handleNav('/how-it-works#insurers')} style={{ cursor: 'pointer', paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#6f6f6f' }}>↳ For Insurers</a>
                 <a onClick={() => handleNav('/about')} style={{ cursor: 'pointer' }}>About</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Buyer Portal</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Seller Portal</a>
                 <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Bank Portal</a>
+                <a onClick={() => handleNav('/login')} style={{ cursor: 'pointer' }}>Insurer Portal</a>
                 {user ? (
                     <>
                         <a onClick={() => handleNav(getDashboardPath())} style={{ cursor: 'pointer' }}>My Dashboard</a>
