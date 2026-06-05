@@ -1305,7 +1305,7 @@ function AdminCarsView() {
         try {
             const { data, error } = await supabase
                 .from('cars')
-                .select('car_id, make, model, year, price, status, city, listed_at, created_at, seller_id')
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -1373,7 +1373,7 @@ function AdminCarsView() {
                                     <th>Vehicle</th>
                                     <th>Price (TZS)</th>
                                     <th>Status</th>
-                                    <th>City</th>
+                                    <th>Mileage</th>
                                     <th>Seller</th>
                                     <th>Listed</th>
                                 </tr>
@@ -1386,7 +1386,7 @@ function AdminCarsView() {
                                         <td>{car.year} {car.make} {car.model}</td>
                                         <td>{(car.price || 0).toLocaleString()}</td>
                                         <td><span className={`badge ${statusBadge(car.status)}`}>{car.status || 'unknown'}</span></td>
-                                        <td>{car.city || '—'}</td>
+                                        <td>{car.mileage ? `${car.mileage.toLocaleString()} km` : '—'}</td>
                                         <td>{car.sellerName}</td>
                                         <td>{car.listed_at ? new Date(car.listed_at).toLocaleDateString('en-GB') : car.created_at ? new Date(car.created_at).toLocaleDateString('en-GB') : '—'}</td>
                                     </tr>
