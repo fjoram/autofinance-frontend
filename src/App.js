@@ -2865,6 +2865,8 @@ function BuyerDashboard() {
     const [myApplications, setMyApplications] = useState([]);
     const [appsLoading, setAppsLoading] = useState(false);
     const [detailApp, setDetailApp] = useState(null);
+    const [selectedInsurance, setSelectedInsurance] = useState(null);
+    const [insuranceProducts, setInsuranceProducts] = useState([]);
 
     // Fetch cars from database on mount
     useEffect(() => {
@@ -2890,7 +2892,14 @@ function BuyerDashboard() {
                     .eq('status', 'available')
                     .single();
 
-                if (data) handleCarSelect(data);
+                if (data) {
+                    await handleCarSelect(data);
+                    // Restore insurance selection after products are loaded
+                    const savedInsurance = localStorage.getItem('pendingInsurance');
+                    if (savedInsurance) {
+                        try { setSelectedInsurance(JSON.parse(savedInsurance)); } catch (e) {}
+                    }
+                }
             } catch (err) {
                 console.error('Error resuming pending car:', err);
             } finally {
@@ -2969,33 +2978,33 @@ function BuyerDashboard() {
     // Fetch loan products when car is selected
     const handleCarSelect = async (car) => {
         setSelectedCar(car);
-		setSelectedImageIndex(0); // ADD THIS LINE
+        setSelectedImageIndex(0);
+        setSelectedInsurance(null);
         setLoanDetails({
             downPayment: Math.round(car.price * 0.2),
             term: 36
         });
 
-        // Fetch available loan products
+        // Fetch loan products and insurance products in parallel
         try {
-            const { data, error } = await supabase
-                .from('loan_products')
-                .select(`
-                    *,
-                    bank:banks(
-                        bank_id,
-                        bank_name,
-                        bank_code
-                    )
-                `)
-                .eq('is_active', true)
-                .gte('max_loan_amount', car.price - Math.round(car.price * 0.2))
-                .lte('min_loan_amount', car.price - Math.round(car.price * 0.2));
+            const [loanRes, insRes] = await Promise.all([
+                supabase
+                    .from('loan_products')
+                    .select(`*, bank:banks(bank_id, bank_name, bank_code)`)
+                    .eq('is_active', true)
+                    .gte('max_loan_amount', car.price - Math.round(car.price * 0.2))
+                    .lte('min_loan_amount', car.price - Math.round(car.price * 0.2)),
+                supabase
+                    .from('insurance_products')
+                    .select(`*, company:insurance_companies(company_name)`)
+                    .eq('is_active', true)
+            ]);
 
-            if (error) throw error;
-
-            setLoanProducts(data || []);
+            if (loanRes.error) throw loanRes.error;
+            setLoanProducts(loanRes.data || []);
+            setInsuranceProducts(insRes.data || []);
         } catch (error) {
-            console.error('Error fetching loan products:', error);
+            console.error('Error fetching products:', error);
         }
     };
 
@@ -3075,6 +3084,8 @@ function BuyerDashboard() {
             car_id: selectedCar.car_id,
             seller_id: selectedCar.seller_id,
             bank_id: loanOffer.bankId,
+            insurance_product_id: selectedInsurance?.insurance_product_id || null,
+            insurance_premium: selectedInsurance?.premium || null,
             loan_product_id: loanOffer.productId,
             car_make: selectedCar.make,
             car_model: selectedCar.model,
@@ -3549,6 +3560,61 @@ function BuyerDashboard() {
                                 )}
                             </div>
 
+                            {/* Insurance Selection */}
+                            <div className="card">
+                                <h3>🛡️ Select Insurance</h3>
+                                <p style={{ color: '#6c757d', fontSize: '0.875rem', margin: '0.5rem 0 1rem' }}>
+                                    Insurance is required for all financed vehicles.
+                                </p>
+                                {insuranceProducts.length === 0 ? (
+                                    <p style={{ color: '#8d8d8d', fontSize: '0.875rem' }}>No insurance products available at the moment.</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {insuranceProducts.map(ins => {
+                                            const premium = Math.round((selectedCar.price || 0) * parseFloat(ins.base_premium_percent) / 100);
+                                            const isSelected = selectedInsurance?.insurance_product_id === ins.insurance_product_id;
+                                            return (
+                                                <div
+                                                    key={ins.insurance_product_id}
+                                                    onClick={() => setSelectedInsurance({ ...ins, premium })}
+                                                    style={{
+                                                        border: `2px solid ${isSelected ? '#667eea' : '#e9ecef'}`,
+                                                        borderRadius: '6px',
+                                                        padding: '0.875rem 1rem',
+                                                        cursor: 'pointer',
+                                                        background: isSelected ? '#f0f0ff' : 'white',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>
+                                                            {isSelected && <span style={{ color: '#667eea', marginRight: '0.4rem' }}>✓</span>}
+                                                            {ins.company?.company_name || 'Insurance'} — {ins.product_name}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.8125rem', color: '#6c757d', marginTop: '0.2rem' }}>
+                                                            {ins.coverage_type?.replace(/_/g, ' ')} · {ins.base_premium_percent}% of car value
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 800, color: isSelected ? '#667eea' : '#161616' }}>
+                                                            TZS {premium.toLocaleString()}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#8d8d8d' }}>annual</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {insuranceProducts.length > 0 && !selectedInsurance && (
+                                    <p style={{ marginTop: '0.75rem', fontSize: '0.8125rem', color: '#da1e28', fontWeight: 500 }}>
+                                        ⚠ Please select an insurance policy before applying.
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="card">
                                 <h3>Loan Calculator</h3>
                                 <div className="form-group">
@@ -3638,6 +3704,8 @@ function BuyerDashboard() {
                                                         <button
                                                             className="btn btn-sm btn-primary"
                                                             onClick={() => handleApplyForLoan(offer)}
+                                                            disabled={insuranceProducts.length > 0 && !selectedInsurance}
+                                                            title={insuranceProducts.length > 0 && !selectedInsurance ? 'Select insurance first' : ''}
                                                         >
                                                             Apply
                                                         </button>

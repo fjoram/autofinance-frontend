@@ -142,6 +142,11 @@ function PublicCarDetails() {
 
     const handleApplyNow = (productId = null, bankId = null) => {
         if (!user) {
+            // Save car + insurance before auth so we can restore after login
+            localStorage.setItem('pendingCarId', car.car_id);
+            localStorage.setItem('pendingCarName', `${car.year} ${car.make} ${car.model}`);
+            if (selectedInsurance) localStorage.setItem('pendingInsurance', JSON.stringify(selectedInsurance));
+            if (productId) localStorage.setItem('pendingProductId', productId);
             setShowRegisterModal(true);
             return;
         }
