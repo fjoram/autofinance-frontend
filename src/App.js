@@ -4801,6 +4801,10 @@ function PostApprovalTracker({ application, onUpdate }) {
             const reason = prompt('Enter rejection reason:');
             if (!reason) return;
             await update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: reason });
+            // Release car back to available
+            if (application.car_id) {
+                await supabase.from('cars').update({ status: 'available' }).eq('car_id', application.car_id);
+            }
             alert('Application rejected.');
         } else {
             await update({ inspection_status: 'repairs_requested', inspection_notes: 'Repairs requested after failed inspection.' });
@@ -5304,6 +5308,12 @@ function BankDashboard() {
         if (!reason) return;
 
         try {
+            const { data: appData } = await supabase
+                .from('loan_applications')
+                .select('car_id')
+                .eq('application_id', appId)
+                .single();
+
             const { error } = await supabase
                 .from('loan_applications')
                 .update({
@@ -5315,9 +5325,14 @@ function BankDashboard() {
 
             if (error) throw error;
 
+            // Release the car back to available
+            if (appData?.car_id) {
+                await supabase.from('cars').update({ status: 'available' }).eq('car_id', appData.car_id);
+            }
+
             alert('✅ Application rejected.');
             setSelectedApplication(null);
-            fetchApplications(); // Refresh list
+            fetchApplications();
         } catch (error) {
             console.error('Error rejecting application:', error);
             alert('❌ Error rejecting application');
