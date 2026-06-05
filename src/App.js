@@ -1293,6 +1293,7 @@ function AdminCarsView() {
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [fetchError, setFetchError] = useState('');
 
     useEffect(() => {
         fetchCars();
@@ -1300,14 +1301,35 @@ function AdminCarsView() {
 
     const fetchCars = async () => {
         setLoading(true);
+        setFetchError('');
         try {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('cars')
-                .select('car_id, make, model, year, price, status, location, listed_at, created_at, seller:sellers(business_name)')
+                .select('car_id, make, model, year, price, status, location, listed_at, created_at, seller_id')
                 .order('created_at', { ascending: false });
-            setCars(data || []);
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                setCars([]);
+                return;
+            }
+
+            // Fetch seller names separately
+            const sellerIds = [...new Set(data.map(c => c.seller_id).filter(Boolean))];
+            let sellerMap = {};
+            if (sellerIds.length > 0) {
+                const { data: sellers } = await supabase
+                    .from('sellers')
+                    .select('seller_id, business_name')
+                    .in('seller_id', sellerIds);
+                (sellers || []).forEach(s => { sellerMap[s.seller_id] = s.business_name; });
+            }
+
+            setCars(data.map(c => ({ ...c, sellerName: sellerMap[c.seller_id] || '—' })));
         } catch (error) {
             console.error('Error fetching cars:', error);
+            setFetchError(error?.message || 'Failed to load cars');
         } finally {
             setLoading(false);
         }
@@ -1341,6 +1363,8 @@ function AdminCarsView() {
                 </div>
                 {loading ? (
                     <p style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>Loading cars...</p>
+                ) : fetchError ? (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>Error: {fetchError}</p>
                 ) : (
                     <div className="table-scroll">
                         <table className="comparison-table">
@@ -1363,7 +1387,7 @@ function AdminCarsView() {
                                         <td>{(car.price || 0).toLocaleString()}</td>
                                         <td><span className={`badge ${statusBadge(car.status)}`}>{car.status || 'unknown'}</span></td>
                                         <td>{car.location || '—'}</td>
-                                        <td>{car.seller?.business_name || '—'}</td>
+                                        <td>{car.sellerName}</td>
                                         <td>{car.listed_at ? new Date(car.listed_at).toLocaleDateString('en-GB') : car.created_at ? new Date(car.created_at).toLocaleDateString('en-GB') : '—'}</td>
                                     </tr>
                                 ))}
