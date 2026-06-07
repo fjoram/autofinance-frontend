@@ -1448,7 +1448,7 @@ function AdminApplicationsView() {
                     created_at,
                     status,
                     loan_amount,
-                    buyer:buyers!buyer_id(user:users!buyers_user_id_fkey(first_name, last_name)),
+                    buyer:buyers!buyer_id(nida_number, user:users!buyers_user_id_fkey(first_name, last_name)),
                     car:cars!car_id(make, model, year),
                     bank:banks!bank_id(bank_name),
                     seller:sellers!seller_id(business_name)
@@ -1498,6 +1498,7 @@ function AdminApplicationsView() {
                                 <tr>
                                     <th>Date</th>
                                     <th>Buyer</th>
+                                    <th>NIDA</th>
                                     <th>Car</th>
                                     <th>Bank</th>
                                     <th>Seller</th>
@@ -1507,11 +1508,12 @@ function AdminApplicationsView() {
                             </thead>
                             <tbody>
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan="7" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No applications found</td></tr>
+                                    <tr><td colSpan="8" style={{ textAlign: 'center', color: '#6c757d', padding: '2rem' }}>No applications found</td></tr>
                                 ) : filtered.map(app => (
                                     <tr key={app.application_id}>
                                         <td>{new Date(app.submitted_at || app.created_at).toLocaleDateString('en-GB')}</td>
                                         <td>{[app.buyer?.user?.first_name, app.buyer?.user?.last_name].filter(Boolean).join(' ') || '—'}</td>
+                                        <td><code style={{ fontSize: '0.8rem' }}>{app.buyer?.nida_number || '—'}</code></td>
                                         <td>{app.car ? `${app.car.year} ${app.car.make} ${app.car.model}` : '—'}</td>
                                         <td>{app.bank?.bank_name || '—'}</td>
                                         <td>{app.seller?.business_name || '—'}</td>
@@ -5206,6 +5208,7 @@ function BankDashboard() {
                     *,
                     buyer:buyers!buyer_id(
                         buyer_id,
+                        nida_number,
                         user:users!buyers_user_id_fkey(
                             first_name,
                             last_name,
@@ -5657,6 +5660,14 @@ function BankDashboard() {
                                         <tr>
                                             <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>Phone:</td>
                                             <td style={{ padding: '0.5rem' }}>{selectedApplication.buyer?.user?.phone}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>NIDA Number:</td>
+                                            <td style={{ padding: '0.5rem' }}>
+                                                {selectedApplication.buyer?.nida_number
+                                                    ? <code style={{ background: '#f4f4f4', padding: '2px 6px', borderRadius: '4px', fontSize: '0.9rem' }}>{selectedApplication.buyer.nida_number}</code>
+                                                    : <span style={{ color: '#8d8d8d' }}>Not provided</span>}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
